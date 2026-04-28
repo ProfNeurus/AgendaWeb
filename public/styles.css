@@ -141,20 +141,23 @@ body {
     color: white;
 }
 
-.logo-icon {
-    width: 60px;
-    height: 60px;
+.logo-container {
+    width: 100px;
+    height: 100px;
     margin: 0 auto 16px;
-    background: rgba(255, 255, 255, 0.2);
+    background: white;
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 10px;
+    box-shadow: var(--shadow-sm);
 }
 
-.logo-icon svg {
-    width: 32px;
-    height: 32px;
+.company-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .login-header h1 {
@@ -348,17 +351,19 @@ body {
 .logo-icon.small {
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-    border-radius: var(--radius-md);
+    background: white;
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 4px;
+    box-shadow: var(--shadow-sm);
 }
 
-.logo-icon.small svg {
-    width: 22px;
-    height: 22px;
-    color: white;
+.logo-icon.small img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .header-left h1 {
