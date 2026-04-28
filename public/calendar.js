@@ -11,9 +11,6 @@ let userName = '';
 let currentView = 'week'; // 'month', 'week', 'day' - semanales por defecto
 const THEME_STORAGE_KEY = 'agenda-theme';
 
-// Notificaciones
-const notifiedTasks = new Set();
-
 // Detectar si es móvil
 const isMobile = () => window.innerWidth <= 768;
 const isSmallMobile = () => window.innerWidth <= 480;
@@ -66,15 +63,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Escuchar cambios de tamaño de pantalla
     window.addEventListener('resize', handleResize);
     handleResize(); // Aplicar inicialmente
-
-    // Inicializar notificaciones
-    requestNotificationPermission();
-    
-    // Verificar notificaciones cada minuto
-    setInterval(checkNotifications, 60000);
-    
-    // Recargar tareas automáticamente cada 5 minutos para tener datos frescos
-    setInterval(loadTasks, 300000);
 });
 
 function initTheme() {
@@ -1599,66 +1587,4 @@ function handleSwipe() {
             navigate(1);
         }
     }
-}
-
-/**
- * LÓGICA DE NOTIFICACIONES
- */
-
-// Solicitar permiso para notificaciones
-function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-        console.log("Este navegador no soporta notificaciones de escritorio");
-        return;
-    }
-
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                console.log("Permiso de notificación concedido");
-            }
-        });
-    }
-}
-
-// Verificar si hay tareas que comiencen en 10 minutos
-function checkNotifications() {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-
-    const now = new Date();
-    tasks.forEach(task => {
-        // Solo notificar si tiene fecha, no ha sido notificada y no está terminada
-        if (!task.FechaPrometido || notifiedTasks.has(task.ID_PedidoServicio)) return;
-        if (task.ID_Estado === 'CER' || task.ID_Estado === 'TRE') return;
-
-        const startTime = new Date(task.FechaPrometido);
-        const diffMs = startTime - now;
-        const diffMin = diffMs / (1000 * 60);
-
-        // Si faltan entre 9.0 y 10.5 minutos
-        if (diffMin > 0 && diffMin <= 10.5) {
-            showTaskNotification(task);
-            notifiedTasks.add(task.ID_PedidoServicio);
-        }
-    });
-}
-
-// Mostrar la notificación física
-function showTaskNotification(task) {
-    const timeStr = new Date(task.FechaPrometido).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const clientName = task.ClienteNombre || 'Cliente desconocido';
-    
-    const notification = new Notification("Próxima Tarea (10 min)", {
-        body: `Cliente: ${clientName}\nInicio: ${timeStr}\nSolicitante: ${task.Solicitante || 'N/A'}`,
-        icon: '/favicon.ico',
-        tag: 'task-alert-' + task.ID_PedidoServicio, // Evita duplicados si se recarga la página
-        requireInteraction: true // La notificación se queda hasta que el usuario la cierre o haga clic
-    });
-
-    notification.onclick = function(event) {
-        event.preventDefault();
-        window.focus();
-        showTaskDetail(task);
-        notification.close();
-    };
 }
