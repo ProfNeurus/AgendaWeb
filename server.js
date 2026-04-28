@@ -748,7 +748,7 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
 
         // 2. RECUADRO GRIS IZQUIERDO (Datos de la Tarea)
         const leftBoxX = 50;
-        const leftBoxY = 195;
+        const leftBoxY = 205;
         const boxWidth = 240;
         
         doc.fontSize(10).fillColor('#333333');
@@ -771,7 +771,7 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         doc.fontSize(9).font('Helvetica').text(task.Falla || 'Sin falla reportada', { width: boxWidth, align: 'justify' });
 
         // 4. DEBAJO DE FRANJA MORADA (Devolución)
-        const feedbackY = 330;
+        const feedbackY = 455;
         doc.fontSize(11).font('Helvetica-Bold').fillColor('#443891'); // Color morado para el título
         doc.text('DEVOLUCIÓN TÉCNICA', leftBoxX, feedbackY);
         
