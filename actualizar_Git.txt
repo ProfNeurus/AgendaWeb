@@ -1,0 +1,46 @@
+# GUÍA DE ACTUALIZACIÓN Y VERSIONADO (GIT + GITHUB)
+
+Este archivo contiene los comandos y pasos necesarios para mantener tu proyecto 'AgendaWeb' respaldado en GitHub y actualizado.
+
+## 1. FLUJO DE TRABAJO DIARIO (Local -> GitHub)
+Cada vez que realices cambios en tu código y quieras guardarlos:
+
+1. Ver el estado de los cambios:
+   git status
+
+2. Preparar los archivos para el envío:
+   git add .
+
+3. Crear un punto de restauración (Commit):
+   git commit -m "Descripción breve de los cambios"
+
+4. Subir a GitHub:
+   git push origin main
+
+---
+
+## 2. ACTUALIZACIÓN EN EL SERVIDOR (GitHub -> Ubuntu)
+Si el proceso es manual, debes entrar a tu servidor Ubuntu y ejecutar:
+
+1. Entrar a la carpeta:
+   cd /ruta/de/tu/proyecto
+
+2. Descargar los cambios:
+   git pull origin main
+
+3. Reiniciar el proceso (si usas PM2):
+   pm2 restart agenda-web
+
+---
+
+## 3. CONFIGURACIÓN INICIAL DE IDENTIDAD
+Si es la primera vez en una máquina nueva, configura tu nombre y correo:
+
+git config --global user.name "Tu Nombre"
+git config --global user.email "tu@email.com"
+
+---
+
+## 4. RECURSOS ÚTILES
+Repositorio actual: https://github.com/ProfNeurus/AgendaWeb
+Branch principal: main

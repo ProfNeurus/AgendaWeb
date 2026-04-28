@@ -1,0 +1,33 @@
+name: Deploy to Ubuntu
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Executing remote ssh commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navegar a la carpeta del proyecto (Ajustar esta ruta según sea necesario)
+            cd ~/AgendaWeb || cd /var/www/AgendaWeb
+            
+            # Descargar los últimos cambios
+            git pull origin main
+            
+            # Instalar dependencias si hay cambios en package.json
+            npm install --production
+            
+            # Reiniciar la aplicación con PM2
+            # Intentamos reiniciar, si no existe el proceso lo iniciamos por primera vez
+            pm2 restart agenda-calendar-app || pm2 start server.js --name agenda-calendar-app
