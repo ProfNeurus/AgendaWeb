@@ -54,8 +54,7 @@ function requireAuth(req, res, next) {
 function adjustTimezone(date) {
     if (!date) return null;
     const d = new Date(date);
-    // Ajustar 3 horas para compensar UTC-3
-    d.setHours(d.getHours() + 3);
+    // Devolvemos el ISO directamente sin sumar horas manualmente
     return d.toISOString();
 }
 
@@ -291,9 +290,9 @@ app.put('/api/task/:id', requireAuth, async (req, res) => {
         let updateFields = [];
         let request = pool.request().input('id', sql.Int, parseInt(id));
 
-        // Siempre actualizar el estado a CER (Cerrado) al guardar
+        // Siempre actualizar el estado a TRE (Trabajo Realizado) al guardar
         updateFields.push('ID_Estado = @estado');
-        request = request.input('estado', sql.VarChar(3), 'CER');
+        request = request.input('estado', sql.VarChar(3), 'TRE');
 
         // Actualizar diagnostico si se proporciona
         if (diagnostico !== undefined) {
@@ -310,11 +309,9 @@ app.put('/api/task/:id', requireAuth, async (req, res) => {
             const nuevaFecha = new Date(fechaOriginal);
             nuevaFecha.setHours(horas, minutos, 0, 0);
 
-            // Ajustar zona horaria (UTC-3 para Argentina)
-            const fechaUTC = new Date(nuevaFecha.getTime() - (3 * 60 * 60 * 1000));
-
+            // Ajustar la fecha (Ya no restamos 3 horas manualmente)
             updateFields.push('FechaPrometido = @fechaPrometido');
-            request = request.input('fechaPrometido', sql.DateTime, fechaUTC);
+            request = request.input('fechaPrometido', sql.DateTime, nuevaFecha);
         }
 
         // Actualizar FechaFinalizacion (hora de fin) si se proporciona
@@ -334,11 +331,9 @@ app.put('/api/task/:id', requireAuth, async (req, res) => {
             const nuevaFecha = new Date(fechaBase);
             nuevaFecha.setHours(horas, minutos, 0, 0);
 
-            // Ajustar zona horaria (UTC-3)
-            const fechaUTC = new Date(nuevaFecha.getTime() - (3 * 60 * 60 * 1000));
-
+            // Ajustar la fecha (Ya no restamos 3 horas manualmente)
             updateFields.push('FechaFinalizacion = @fechaFinalizacion');
-            request = request.input('fechaFinalizacion', sql.DateTime, fechaUTC);
+            request = request.input('fechaFinalizacion', sql.DateTime, nuevaFecha);
         }
 
         if (updateFields.length === 0) {
