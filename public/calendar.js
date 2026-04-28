@@ -275,10 +275,10 @@ function updateStats() {
         return taskDate >= weekStart && taskDate <= weekEnd;
     }).length;
 
-    totalTasksEl.textContent = total;
-    completedTasksEl.textContent = completed;
-    pendingTasksEl.textContent = pending;
-    weekTasksEl.textContent = thisWeek;
+    if (totalTasksEl) totalTasksEl.textContent = total;
+    if (completedTasksEl) completedTasksEl.textContent = completed;
+    if (pendingTasksEl) pendingTasksEl.textContent = pending;
+    if (weekTasksEl) weekTasksEl.textContent = thisWeek;
 }
 
 // Cambiar vista
