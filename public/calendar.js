@@ -515,7 +515,10 @@ function renderWeekView() {
                 taskEl.style.width = `calc(${widthPercent}% - 2px)`;
                 taskEl.style.left = `calc(${colIndex * widthPercent}%)`;
 
-                taskEl.style.height = `${Math.max(20, duration * slotHeight - 2)}px`;
+                taskEl.style.height = `${Math.max(25, duration * slotHeight - 2)}px`;
+                if (duration < 0.7) {
+                    taskEl.classList.add('short-task');
+                }
 
                 // Mostrar hora de inicio y fin
                 const endTime = getTaskEndTime(task);
@@ -612,7 +615,10 @@ function renderDayView() {
             taskEl.style.width = `calc(${widthPercent}% - 8px)`;
             taskEl.style.left = `calc(${colIndex * widthPercent}% + 4px)`;
 
-            taskEl.style.height = `${Math.max(20, duration * slotHeight - 4)}px`;
+            taskEl.style.height = `${Math.max(25, duration * slotHeight - 4)}px`;
+            if (duration < 0.7) {
+                taskEl.classList.add('short-task');
+            }
 
             // Mostrar hora de inicio y fin
             const endTime = getTaskEndTime(task);
