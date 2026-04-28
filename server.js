@@ -54,7 +54,8 @@ function requireAuth(req, res, next) {
 function adjustTimezone(date) {
     if (!date) return null;
     const d = new Date(date);
-    // Devolvemos el ISO directamente sin sumar horas manualmente
+    // Ajustar 3 horas para compensar la visualización en el navegador (UTC-3)
+    d.setHours(d.getHours() + 3);
     return d.toISOString();
 }
 
