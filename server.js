@@ -671,8 +671,8 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         const fechaFin = task.FechaFinalizacion ? new Date(adjustTimezone(task.FechaFinalizacion)) : null;
 
         const fechaStr = fechaPrometido ? fechaPrometido.toLocaleDateString('es-AR') : 'Sin fecha';
-        const horaInicioStr = fechaPrometido ? fechaPrometido.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'Sin hora';
-        const horaFinStr = fechaFin ? fechaFin.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'No registrada';
+        const horaInicioStr = fechaPrometido ? fechaPrometido.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Sin hora';
+        const horaFinStr = fechaFin ? fechaFin.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'No registrada';
 
         // Enviar email (usando configuración SMTP)
         const nodemailer = require('nodemailer');
@@ -732,67 +732,75 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
             }
         });
 
-        // ------------------ DIBUJAR PDF ------------------
-        // Agregar Logo
+        // ------------------ DIBUJAR PDF CON MARCO ------------------
         const fs = require('fs');
         const path = require('path');
-        const logoPath = path.join(__dirname, 'LogoBYA.png');
-        if (fs.existsSync(logoPath)) {
-            doc.image(logoPath, 50, 45, { width: 120 });
+        const backgroundPath = path.join(__dirname, 'public', 'MarcoPDF.jpg');
+        
+        // Dibujar el fondo (A4: 595.28 x 841.89)
+        if (fs.existsSync(backgroundPath)) {
+            doc.image(backgroundPath, 0, 0, { width: doc.page.width, height: doc.page.height });
         }
 
-        // Textos centrados (Dirección)
-        doc.fontSize(10).font('Helvetica');
-        const yCenter = 50;
-        doc.text('Av. Rivadavia 8481 - 6 B', 0, yCenter, { align: 'center' });
-        doc.text('(C1407DYG) - CABA', 0, yCenter + 15, { align: 'center' });
+        // 1. FECHA (Margen superior derecho)
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333');
+        doc.text(`Fecha: ${fechaStr}`, 400, 50, { align: 'right', width: 145 });
 
-        // Textos derecha (Fecha y N° Tarea)
-        doc.text(`Fecha: ${fechaStr}`, 50, yCenter, { align: 'right', width: doc.page.width - 100 });
-        doc.text(`Tarea #${task.ID_PEDIDOSERVICIO}`, 50, yCenter + 15, { align: 'right', width: doc.page.width - 100 });
+        // 2. RECUADRO GRIS IZQUIERDO (Datos de la Tarea)
+        const leftBoxX = 50;
+        const leftBoxY = 195;
+        const boxWidth = 240;
+        
+        doc.fontSize(10).fillColor('#333333');
+        doc.font('Helvetica-Bold').text('N° de Tarea: ', leftBoxX, leftBoxY, { continued: true })
+           .font('Helvetica').text(task.ID_PEDIDOSERVICIO);
+           
+        doc.font('Helvetica-Bold').text('Empresa: ', { continued: true })
+           .font('Helvetica').text(task.ClienteNombre || 'N/A');
+           
+        doc.font('Helvetica-Bold').text('Solicitante: ', { continued: true })
+           .font('Helvetica').text(task.Solicitante || 'N/A');
+           
+        doc.font('Helvetica-Bold').text('Hora Solicitada: ', { continued: true })
+           .font('Helvetica').text(horaInicioStr);
 
-        // Título Principal
-        doc.moveDown(4);
-        doc.fontSize(14).font('Helvetica-Bold').text('INFORME DE SERVICIO TÉCNICO', { align: 'center' });
-        doc.moveDown(2);
+        // 3. RECUADRO GRIS DERECHO (Falla Reportada)
+        const rightBoxX = 305;
+        doc.font('Helvetica-Bold').text('FALLA REPORTADA:', rightBoxX, leftBoxY);
+        doc.moveDown(0.3);
+        doc.fontSize(9).font('Helvetica').text(task.Falla || 'Sin falla reportada', { width: boxWidth, align: 'justify' });
 
-        // Cuerpo: Datos Básicos
-        const textOptions = { lineGap: 6 };
-        doc.fontSize(10);
-
-        doc.font('Helvetica-Bold').text('Empresa / Cliente: ', { continued: true }).font('Helvetica').text(task.ClienteNombre || 'Sin cliente', textOptions);
-        doc.font('Helvetica-Bold').text('Dirección: ', { continued: true }).font('Helvetica').text(task.Domicilio || task.Direccion || 'No especificada', textOptions);
-        doc.font('Helvetica-Bold').text('Solicitante: ', { continued: true }).font('Helvetica').text(task.Solicitante || 'No especificado', textOptions);
-
+        // 4. DEBAJO DE FRANJA MORADA (Devolución)
+        const feedbackY = 330;
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#443891'); // Color morado para el título
+        doc.text('DEVOLUCIÓN TÉCNICA', leftBoxX, feedbackY);
+        
+        doc.moveDown(0.5);
+        doc.fontSize(10).fillColor('#333333');
         const tecnicoName = task.TecnicoNombre || req.session.userName || 'No asignado';
-        doc.font('Helvetica-Bold').text('Técnico que realizó la tarea: ', { continued: true }).font('Helvetica').text(tecnicoName, textOptions);
-
-        doc.font('Helvetica-Bold').text('Hora de Inicio: ', { continued: true }).font('Helvetica').text(horaInicioStr, textOptions);
-        doc.font('Helvetica-Bold').text('Hora de Finalización: ', { continued: true }).font('Helvetica').text(horaFinStr, textOptions);
-
-        doc.moveDown(1.5);
-
-        // Falla y Diagnóstico
-        doc.fontSize(11).font('Helvetica-Bold').text('FALLA REPORTADA:');
-        doc.moveDown(0.3);
-        doc.fontSize(10).font('Helvetica').text(task.Falla || 'No se especificó ninguna falla.', { align: 'justify', lineGap: 3 });
+        
+        doc.font('Helvetica-Bold').text('Técnico: ', { continued: true })
+           .font('Helvetica').text(tecnicoName);
+           
+        doc.font('Helvetica-Bold').text('Hora de Finalización: ', { continued: true })
+           .font('Helvetica').text(horaFinStr);
+        
         doc.moveDown(1);
+        doc.font('Helvetica-Bold').text('DIAGNÓSTICO / TRABAJO REALIZADO:');
+        doc.moveDown(0.5);
+        doc.font('Helvetica').text(task.Diagnostico || 'Sin diagnóstico reportado.', { align: 'justify', width: 500 });
 
-        doc.fontSize(11).font('Helvetica-Bold').text('DIAGNÓSTICO / DEVOLUCIÓN:');
-        doc.moveDown(0.3);
-        doc.fontSize(10).font('Helvetica').text(task.Diagnostico || 'Sin diagnóstico reportado.', { align: 'justify', lineGap: 3 });
-
-        // Pie de Página - Legales
+        // 5. PIE DE PÁGINA (Leyenda legal)
         const legalText = "ESTIMADO CLIENTE, LE RECORDAMOS QUE LA VISITA MINIMA A FACTURAR ES DE TRES HORAS, AUN EN EL CASO QUE NUESTRO PERSONAL HAYA PERMANECIDO MENOS TIEMPO EN SU EMPRESA. EN CUANTO A LOS ACCESOS REMOTOS, EL TIEMPO MINIMO ES DE UNA HORA";
 
-        doc.fontSize(7).font('Helvetica-Bold')
+        doc.fontSize(7).font('Helvetica-Bold').fillColor('#666666')
             .text(legalText, 50, doc.page.height - 80, {
                 align: 'center',
                 width: doc.page.width - 100,
                 lineGap: 2
             });
 
-        // Finalizar documento, dispara evento 'end'
+        // Finalizar documento
         doc.end();
 
     } catch (error) {

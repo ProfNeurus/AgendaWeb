@@ -41,6 +41,21 @@ git config --global user.email "tu@email.com"
 
 ---
 
-## 4. RECURSOS ÚTILES
+## 4. GESTIÓN DE VERSIONES (TAGS)
+Para marcar una versión estable (ejemplo: v1.0, v1.1):
+
+1. Crear etiqueta de versión:
+   git tag -a v1.0 -m "Descripción de la versión"
+
+2. Subir la etiqueta a GitHub:
+   git push origin v1.0
+
+3. Borrar una etiqueta (si te equivocas):
+   git tag -d v1.0           (Local)
+   git push origin --delete v1.0 (GitHub)
+
+---
+
+## 5. RECURSOS ÚTILES
 Repositorio actual: https://github.com/ProfNeurus/AgendaWeb
 Branch principal: main
