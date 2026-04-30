@@ -10,6 +10,7 @@ let tasks = [];
 let userName = '';
 let currentView = 'week'; // 'month', 'week', 'day' - semanales por defecto
 const THEME_STORAGE_KEY = 'agenda-theme';
+let refreshInterval = null;
 
 // Detectar si es móvil
 const isMobile = () => window.innerWidth <= 768;
@@ -156,6 +157,9 @@ async function checkSession() {
         await loadTasks();
         render();
 
+        // Iniciar auto-refresco cada 15 minutos
+        startAutoRefresh();
+
     } catch (error) {
         console.error('Error verificando sesion:', error);
         window.location.href = '/';
@@ -178,6 +182,35 @@ async function loadTasks() {
     } catch (error) {
         console.error('Error:', error);
     }
+}
+
+/**
+ * Inicia el proceso de refresco automático cada 15 minutos.
+ * Solo refresca si no hay ningún modal abierto para no interrumpir al usuario.
+ */
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    
+    // 15 minutos = 15 * 60 * 1000 ms
+    const REFRESH_TIME = 15 * 60 * 1000;
+    
+    refreshInterval = setInterval(async () => {
+        // Verificar si hay algún modal abierto
+        const isModalOpen = document.querySelector('.modal.show');
+        
+        if (!isModalOpen) {
+            console.log('Ejecutando refresco automático de tareas...');
+            await loadTasks();
+            render();
+            
+            // Si hay una fecha seleccionada y no estamos en vista diaria, refrescar la lista lateral
+            if (selectedDate && currentView !== 'day') {
+                renderTasksForDate(selectedDate);
+            }
+        } else {
+            console.log('Refresco automático pospuesto: hay un modal abierto.');
+        }
+    }, REFRESH_TIME);
 }
 
 // Pre-procesar tareas para calcular superposiciones en la grilla y asignarle a cada tarea una columna 
