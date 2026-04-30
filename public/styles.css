@@ -1093,7 +1093,7 @@ body {
 .tasks-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px; /* Gap reducido */
     max-height: 400px;
     overflow-y: auto;
 }
@@ -1118,7 +1118,7 @@ body {
 .task-card {
     background: var(--background);
     border-radius: var(--radius-md);
-    padding: 14px;
+    padding: 10px; /* Padding reducido */
     border: 1px solid var(--border-color);
     cursor: pointer;
     transition: var(--transition);
@@ -1139,7 +1139,7 @@ body {
 .task-client {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: 0.85rem; /* Fuente reducida */
 }
 
 .task-status {
@@ -1175,7 +1175,7 @@ body {
 }
 
 .task-info-row {
-    font-size: 0.85rem;
+    font-size: 0.75rem; /* Fuente reducida */
     color: var(--text-secondary);
     display: flex;
     align-items: center;
