@@ -60,6 +60,25 @@
                 </button>
             </div>
             <h2 id="currentMonth" class="month-title">Abril 2024</h2>
+            <div class="header-center-actions">
+                <button id="btnClientes" class="header-action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Clientes
+                </button>
+                <button id="btnLlaves" class="header-action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="7.5" cy="15.5" r="2.5"/>
+                        <path d="M10 14l6-6a2.828 2.828 0 1 1 4 4l-6 6"/>
+                        <path d="M17 10l2 2"/>
+                    </svg>
+                    Llaves
+                </button>
+            </div>
             <div class="view-switcher">
                 <button id="viewMonth" class="view-button">Mes</button>
                 <button id="viewWeek" class="view-button active">Semana</button>
@@ -254,6 +273,147 @@
             </div>
             <div class="modal-body" id="servicioDetailContent">
                 <!-- Servicio detail will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalle de Cliente (v2.0) -->
+    <div id="clienteDetalleModal" class="modal secondary-modal">
+        <div class="modal-content secondary-content cliente-detalle-modal">
+            <div class="modal-header">
+                <h3>Ficha del Cliente</h3>
+                <button class="close-button" onclick="closeClienteDetalleModal()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Información básica del cliente -->
+                <div id="clienteHeaderInfo" class="cliente-header-info">
+                    <div class="info-group">
+                        <span class="info-label">ID:</span>
+                        <span id="det-cliente-id" class="info-value"></span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Razón Social:</span>
+                        <span id="det-cliente-nombre" class="info-value highlight"></span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Domicilio:</span>
+                        <span id="det-cliente-domicilio" class="info-value"></span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Localidad:</span>
+                        <span id="det-cliente-localidad" class="info-value"></span>
+                    </div>
+                </div>
+
+                <!-- Pestañas -->
+                <div class="tabs-container">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchClienteTab('servicios')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                            Servicios
+                        </button>
+                        <button class="tab-btn" onclick="switchClienteTab('contactos')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            Contactos
+                        </button>
+                    </div>
+                    <div id="tab-servicios" class="tab-pane active">
+                        <div id="clienteServiciosContent" class="tab-inner-content">
+                            <!-- Servicios se cargarán aquí -->
+                        </div>
+                    </div>
+                    <div id="tab-contactos" class="tab-pane">
+                        <div id="clienteContactosContent" class="tab-inner-content">
+                            <!-- Contactos se cargarán aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Búsqueda de Clientes -->
+    <div id="clientesSearchModal" class="modal secondary-modal">
+        <div class="modal-content secondary-content search-modal">
+            <div class="modal-header">
+                <h3>Búsqueda de Clientes</h3>
+                <button class="close-button" onclick="closeClientesSearchModal()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-box-container">
+                    <div class="search-input-group">
+                        <input type="text" id="clienteSearchInput" placeholder="Ingrese Razón Social o parte de la misma..." autocomplete="off">
+                        <button id="btnSearchCliente" class="btn-primary-action">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+                <div id="clientesResultsGrid" class="results-grid">
+                    <!-- Resultados de la búsqueda -->
+                    <div class="search-empty-state">
+                        <p>Ingrese un nombre para comenzar la búsqueda</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Búsqueda de Llaves (v2.0) -->
+    <div id="llavesSearchModal" class="modal secondary-modal">
+        <div class="modal-content secondary-content search-modal">
+            <div class="modal-header">
+                <h3>Búsqueda de Llaves / Licencias</h3>
+                <button class="close-button" onclick="closeLlavesSearchModal()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-box-container">
+                    <div class="search-input-group">
+                        <input type="text" id="llaveSearchInput" placeholder="Ingrese Número de Serie..." autocomplete="off">
+                        <button id="btnSearchLlave" class="btn-primary-action">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+                <div id="llavesResultsGrid" class="results-grid">
+                    <!-- Resultados de la búsqueda -->
+                    <div class="search-empty-state">
+                        <p>Ingrese un número de serie para comenzar la búsqueda</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

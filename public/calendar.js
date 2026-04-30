@@ -11,6 +11,7 @@ let userName = '';
 let currentView = 'week'; // 'month', 'week', 'day' - semanales por defecto
 const THEME_STORAGE_KEY = 'agenda-theme';
 let refreshInterval = null;
+let currentClienteId = null;
 
 // Detectar si es móvil
 const isMobile = () => window.innerWidth <= 768;
@@ -64,6 +65,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Escuchar cambios de tamaño de pantalla
     window.addEventListener('resize', handleResize);
     handleResize(); // Aplicar inicialmente
+
+    // Botones de acción del encabezado (v2.0)
+    const btnClientes = document.getElementById('btnClientes');
+    const btnLlaves = document.getElementById('btnLlaves');
+    const btnSearchCliente = document.getElementById('btnSearchCliente');
+    const clienteSearchInput = document.getElementById('clienteSearchInput');
+    const btnSearchLlave = document.getElementById('btnSearchLlave');
+    const llaveSearchInput = document.getElementById('llaveSearchInput');
+
+    if (btnClientes) btnClientes.addEventListener('click', openClientesSearchModal);
+    if (btnLlaves) btnLlaves.addEventListener('click', openLlavesSearchModal);
+    if (btnSearchCliente) btnSearchCliente.addEventListener('click', searchClientes);
+    if (clienteSearchInput) {
+        clienteSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchClientes();
+        });
+    }
+    if (btnSearchLlave) btnSearchLlave.addEventListener('click', searchLlaves);
+    if (llaveSearchInput) {
+        llaveSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchLlaves();
+        });
+    }
 });
 
 function initTheme() {
@@ -807,20 +831,33 @@ function renderTasksForDate(date) {
         taskCard.className = 'task-card';
 
         const estadoTexto = getEstadoTexto(task.ID_Estado);
+        
+        // Calcular horas
+        const taskDate = task.FechaPrometido ? new Date(task.FechaPrometido) : null;
+        const endTime = getTaskEndTime(task);
+        const startHour = getTimeString(taskDate) || '08:00';
+        const endHourStr = getTimeString(endTime) || startHour;
 
         taskCard.innerHTML = `
             <div class="task-card-header">
                 <span class="task-client">${escapeHtml(task.ClienteNombre || 'Sin cliente')}</span>
                 <span class="task-status ${getTaskColorClass(task)}">${escapeHtml(estadoTexto)}</span>
             </div>
-            <div class="task-date">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                ${escapeHtml(task.Solicitante || 'Sin solicitante')}
+            <div class="task-card-body">
+                <div class="task-info-row">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="7" r="4"/>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    </svg>
+                    <span>${escapeHtml(task.Solicitante || 'Sin solicitante')}</span>
+                </div>
+                <div class="task-info-row">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span>${startHour} - ${endHourStr}</span>
+                </div>
             </div>
         `;
 
@@ -1176,6 +1213,371 @@ async function logout() {
     } catch (error) {
         console.error('Error al cerrar sesion:', error);
     }
+}
+
+// ===================== BÚSQUEDA DE CLIENTES (v2.0) =====================
+
+function openClientesSearchModal() {
+    const modal = document.getElementById('clientesSearchModal');
+    const input = document.getElementById('clienteSearchInput');
+    const results = document.getElementById('clientesResultsGrid');
+    
+    if (modal) {
+        modal.classList.add('show');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        if (results) {
+            results.innerHTML = `
+                <div class="search-empty-state">
+                    <p>Ingrese un nombre para comenzar la búsqueda</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function closeClientesSearchModal() {
+    const modal = document.getElementById('clientesSearchModal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function searchClientes() {
+    const input = document.getElementById('clienteSearchInput');
+    const resultsGrid = document.getElementById('clientesResultsGrid');
+    let query = input ? input.value.trim() : '';
+
+    if (query.length < 2) {
+        alert('Por favor, ingrese al menos 2 caracteres para buscar');
+        return;
+    }
+
+    // Asegurar que la búsqueda sea en mayúsculas
+    query = query.toUpperCase();
+
+    if (resultsGrid) {
+        resultsGrid.innerHTML = `
+            <div class="search-loading">
+                <div class="spinner" style="border-top-color: var(--primary-color); margin: 0 auto;"></div>
+                <p style="margin-top: 10px;">Buscando clientes...</p>
+            </div>
+        `;
+    }
+
+    try {
+        const response = await fetch(`/api/clientes/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderClientesGrid(data.clientes);
+        } else {
+            if (resultsGrid) {
+                resultsGrid.innerHTML = `<div class="search-empty-state"><p>Error: ${data.message}</p></div>`;
+            }
+        }
+    } catch (error) {
+        console.error('Error buscando clientes:', error);
+        if (resultsGrid) {
+            resultsGrid.innerHTML = `<div class="search-empty-state"><p>Error al conectar con el servidor</p></div>`;
+        }
+    }
+}
+
+function renderClientesGrid(clientes) {
+    const resultsGrid = document.getElementById('clientesResultsGrid');
+    if (!resultsGrid) return;
+
+    if (clientes.length === 0) {
+        resultsGrid.innerHTML = `
+            <div class="search-empty-state">
+                <p>No se encontraron clientes que coincidan con "${escapeHtml(document.getElementById('clienteSearchInput').value.toUpperCase())}"</p>
+            </div>
+        `;
+        return;
+    }
+
+    resultsGrid.innerHTML = `
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Razón Social</th>
+                        <th>Domicilio</th>
+                        <th>Localidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${clientes.map(cliente => {
+                        const razonSocial = (cliente.RazonSocial || '').replace(/'/g, "\\'");
+                        const domicilio = (cliente.Domicilio || '').replace(/'/g, "\\'");
+                        const localidad = (cliente.Localidad || '').replace(/'/g, "\\'");
+                        return `
+                            <tr class="clickable-row" onclick="openClienteDetalle(${cliente.ID_Cliente}, '${razonSocial}', '${domicilio}', '${localidad}')">
+                                <td>${cliente.ID_Cliente}</td>
+                                <td><strong>${escapeHtml(cliente.RazonSocial)}</strong></td>
+                                <td>${escapeHtml(cliente.Domicilio || 'N/A')}</td>
+                                <td>${escapeHtml(cliente.Localidad || 'N/A')}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// ===================== FICHA DE DETALLE DE CLIENTE (v2.0) =====================
+
+function openClienteDetalle(id, razonSocial, domicilio, localidad) {
+    closeClientesSearchModal(); // Cerrar el buscador al seleccionar un cliente
+    currentClienteId = id;
+    
+    // Set header data
+    document.getElementById('det-cliente-id').textContent = id;
+    document.getElementById('det-cliente-nombre').textContent = razonSocial;
+    document.getElementById('det-cliente-domicilio').textContent = domicilio || 'N/A';
+    document.getElementById('det-cliente-localidad').textContent = localidad || 'N/A';
+    
+    // Reset tabs
+    switchClienteTab('servicios');
+    
+    // Show modal
+    document.getElementById('clienteDetalleModal').classList.add('show');
+}
+
+function closeClienteDetalleModal() {
+    document.getElementById('clienteDetalleModal').classList.remove('show');
+    currentClienteId = null;
+}
+
+function switchClienteTab(tabName) {
+    // Update buttons
+    const buttons = document.querySelectorAll('.tabs-header .tab-btn');
+    buttons.forEach(btn => {
+        if (btn.textContent.toLowerCase().includes(tabName)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Update panes
+    const panes = document.querySelectorAll('.tab-pane');
+    panes.forEach(pane => {
+        if (pane.id === `tab-${tabName}`) {
+            pane.classList.add('active');
+        } else {
+            pane.classList.remove('active');
+        }
+    });
+    
+    // Load content
+    if (tabName === 'servicios') {
+        loadClienteServicios(currentClienteId);
+    } else if (tabName === 'contactos') {
+        loadClienteContactos(currentClienteId);
+    }
+}
+
+async function loadClienteServicios(clienteId) {
+    const container = document.getElementById('clienteServiciosContent');
+    container.innerHTML = '<div class="loading-state">Cargando servicios...</div>';
+    
+    try {
+        const response = await fetch(`/api/cliente/${clienteId}/servicios`);
+        const data = await response.json();
+        
+        if (data.success && data.servicios.length > 0) {
+            container.innerHTML = `
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Técnico</th>
+                                <th>Solicitante</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.servicios.map(servicio => `
+                                <tr ondblclick="openServicioDetail(${servicio.ID_PEDIDOSERVICIO})" class="clickable-row">
+                                    <td>${formatDateTime(servicio.FechaPrometido)}</td>
+                                    <td>${escapeHtml(servicio.NombreTecnico || 'No asignado')}</td>
+                                    <td>${escapeHtml(servicio.Solicitante || 'N/A')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <p class="table-hint">Doble clic para ver detalles del servicio</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<div class="empty-state"><p>No hay servicios registrados.</p></div>';
+        }
+    } catch (error) {
+        console.error('Error cargando servicios:', error);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar servicios.</p></div>';
+    }
+}
+
+async function loadClienteContactos(clienteId) {
+    const container = document.getElementById('clienteContactosContent');
+    container.innerHTML = '<div class="loading-state">Cargando contactos...</div>';
+    
+    try {
+        const response = await fetch(`/api/cliente/${clienteId}/contactos`);
+        const data = await response.json();
+        
+        if (data.success && data.contactos.length > 0) {
+            container.innerHTML = `
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Interno</th>
+                                <th>Celular</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.contactos.map(contacto => `
+                                <tr>
+                                    <td><strong>${escapeHtml(contacto.Nombre)}</strong></td>
+                                    <td>${escapeHtml(contacto.Telefono || '-')}</td>
+                                    <td>${escapeHtml(contacto.Interno || '-')}</td>
+                                    <td>${escapeHtml(contacto.Celular || '-')}</td>
+                                    <td>${escapeHtml(contacto.Email || '-')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<div class="empty-state"><p>No hay contactos registrados.</p></div>';
+        }
+    } catch (error) {
+        console.error('Error cargando contactos:', error);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar contactos.</p></div>';
+    }
+}
+
+// ===================== BÚSQUEDA DE LLAVES (v2.0) =====================
+
+function openLlavesSearchModal() {
+    const modal = document.getElementById('llavesSearchModal');
+    const input = document.getElementById('llaveSearchInput');
+    const results = document.getElementById('llavesResultsGrid');
+    
+    if (modal) {
+        modal.classList.add('show');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        if (results) {
+            results.innerHTML = `
+                <div class="search-empty-state">
+                    <p>Ingrese un número de serie para comenzar la búsqueda</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function closeLlavesSearchModal() {
+    const modal = document.getElementById('llavesSearchModal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function searchLlaves() {
+    const input = document.getElementById('llaveSearchInput');
+    const resultsGrid = document.getElementById('llavesResultsGrid');
+    let query = input ? input.value.trim() : '';
+
+    if (query.length < 2) {
+        alert('Por favor, ingrese al menos 2 caracteres para buscar');
+        return;
+    }
+
+    // Asegurar que la búsqueda sea en mayúsculas
+    query = query.toUpperCase();
+
+    if (resultsGrid) {
+        resultsGrid.innerHTML = `
+            <div class="search-loading">
+                <div class="spinner" style="border-top-color: var(--primary-color); margin: 0 auto;"></div>
+                <p style="margin-top: 10px;">Buscando llaves...</p>
+            </div>
+        `;
+    }
+
+    try {
+        const response = await fetch(`/api/llaves/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderLlavesGrid(data.llaves);
+        } else {
+            if (resultsGrid) {
+                resultsGrid.innerHTML = `<div class="search-empty-state"><p>Error: ${data.message}</p></div>`;
+            }
+        }
+    } catch (error) {
+        console.error('Error buscando llaves:', error);
+        if (resultsGrid) {
+            resultsGrid.innerHTML = `<div class="search-empty-state"><p>Error al conectar con el servidor</p></div>`;
+        }
+    }
+}
+
+function renderLlavesGrid(llaves) {
+    const resultsGrid = document.getElementById('llavesResultsGrid');
+    if (!resultsGrid) return;
+
+    if (llaves.length === 0) {
+        resultsGrid.innerHTML = `
+            <div class="search-empty-state">
+                <p>No se encontraron llaves que coincidan con "${escapeHtml(document.getElementById('llaveSearchInput').value.toUpperCase())}"</p>
+            </div>
+        `;
+        return;
+    }
+
+    resultsGrid.innerHTML = `
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>N° Serie</th>
+                        <th>Cliente</th>
+                        <th>Modelo</th>
+                        <th>Marca</th>
+                        <th>Puestos</th>
+                        <th>Licencia</th>
+                        <th>Producto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${llaves.map(llave => `
+                        <tr>
+                            <td><strong>${escapeHtml(llave.N_Serie)}</strong></td>
+                            <td>${escapeHtml(llave.ClienteNombre || 'N/A')}</td>
+                            <td>${escapeHtml(llave.Modelo || '-')}</td>
+                            <td>${escapeHtml(llave.Marca || '-')}</td>
+                            <td>${escapeHtml(llave.CA_Cant_Puestos || '-')}</td>
+                            <td>${escapeHtml(llave.CA_Licencia || '-')}</td>
+                            <td>${escapeHtml(llave.CA_Producto || '-')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 // ===================== MODALES DE CLIENTE =====================
@@ -1581,8 +1983,17 @@ function formatDateTime(dateString) {
 
 // Tecla ESC para cerrar modal
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && taskModal.classList.contains('show')) {
-        closeModal();
+    if (e.key === 'Escape') {
+        if (taskModal.classList.contains('show')) closeModal();
+        else if (document.getElementById('clientesSearchModal').classList.contains('show')) closeClientesSearchModal();
+        else if (document.getElementById('llavesSearchModal').classList.contains('show')) closeLlavesSearchModal();
+        else if (document.getElementById('clienteDetalleModal').classList.contains('show')) closeClienteDetalleModal();
+        else if (document.getElementById('mailsModal').classList.contains('show')) closeMailsModal();
+        else if (document.getElementById('contactosModal').classList.contains('show')) closeContactosModal();
+        else if (document.getElementById('serviciosModal').classList.contains('show')) closeServiciosModal();
+        else if (document.getElementById('llavesModal').classList.contains('show')) closeLlavesModal();
+        else if (document.getElementById('emailDetailModal').classList.contains('show')) closeEmailDetailModal();
+        else if (document.getElementById('servicioDetailModal').classList.contains('show')) closeServicioDetailModal();
     }
 });
 

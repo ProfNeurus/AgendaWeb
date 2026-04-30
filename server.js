@@ -430,6 +430,40 @@ app.get('/api/email/:id', requireAuth, async (req, res) => {
     }
 });
 
+// API: Buscar clientes por Razón Social
+app.get('/api/clientes/search', requireAuth, async (req, res) => {
+    const { q } = req.query;
+
+    if (!q || q.trim().length < 2) {
+        return res.json({ success: true, clientes: [] });
+    }
+
+    try {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input('query', sql.VarChar, `%${q}%`)
+            .query(`
+                SELECT TOP 50
+                    ID_Cliente,
+                    RazonSocial,
+                    Domicilio,
+                    Localidad
+                FROM CRM_CLIENTES
+                WHERE RazonSocial LIKE @query
+                ORDER BY RazonSocial ASC
+            `);
+
+        res.json({
+            success: true,
+            clientes: result.recordset
+        });
+
+    } catch (error) {
+        console.error('Error buscando clientes:', error);
+        res.status(500).json({ success: false, message: 'Error al buscar clientes: ' + error.message });
+    }
+});
+
 // API: Obtener contactos del cliente
 app.get('/api/cliente/:id/contactos', requireAuth, async (req, res) => {
     const { id } = req.params;
@@ -528,6 +562,45 @@ app.get('/api/cliente/:id/llaves', requireAuth, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error al obtener llaves: ' + error.message });
     }
 });
+
+// API: Buscar llaves/licencias por Número de Serie
+app.get('/api/llaves/search', requireAuth, async (req, res) => {
+    const { q } = req.query;
+
+    if (!q || q.trim().length < 2) {
+        return res.json({ success: true, llaves: [] });
+    }
+
+    try {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input('query', sql.VarChar, `%${q}%`)
+            .query(`
+                SELECT TOP 50
+                    s.N_Serie,
+                    s.Modelo,
+                    s.Marca,
+                    s.CA_Cant_Puestos,
+                    s.CA_Licencia,
+                    s.CA_Producto,
+                    c.RazonSocial AS ClienteNombre
+                FROM CRM_Series s
+                LEFT JOIN CRM_CLIENTES c ON s.ID_Cliente = c.ID_Cliente
+                WHERE s.N_Serie LIKE @query
+                ORDER BY s.N_Serie ASC
+            `);
+
+        res.json({
+            success: true,
+            llaves: result.recordset
+        });
+
+    } catch (error) {
+        console.error('Error buscando llaves:', error);
+        res.status(500).json({ success: false, message: 'Error al buscar llaves: ' + error.message });
+    }
+});
+
 // API: Obtener detalle de un servicio
 app.get('/api/servicio/:id/detalle', requireAuth, async (req, res) => {
     const { id } = req.params;
@@ -736,7 +809,7 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         const fs = require('fs');
         const path = require('path');
         const backgroundPath = path.join(__dirname, 'public', 'MarcoPDF.jpg');
-        
+
         // Dibujar el fondo (A4: 595.28 x 841.89)
         if (fs.existsSync(backgroundPath)) {
             doc.image(backgroundPath, 0, 0, { width: doc.page.width, height: doc.page.height });
@@ -750,19 +823,19 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         const leftBoxX = 50;
         const leftBoxY = 190;
         const boxWidth = 240;
-        
+
         doc.fontSize(10).fillColor('#333333');
         doc.font('Helvetica-Bold').text('N° de Tarea: ', leftBoxX, leftBoxY, { continued: true })
-           .font('Helvetica').text(task.ID_PEDIDOSERVICIO);
-           
+            .font('Helvetica').text(task.ID_PEDIDOSERVICIO);
+
         doc.font('Helvetica-Bold').text('Empresa: ', { continued: true })
-           .font('Helvetica').text(task.ClienteNombre || 'N/A');
-           
+            .font('Helvetica').text(task.ClienteNombre || 'N/A');
+
         doc.font('Helvetica-Bold').text('Solicitante: ', { continued: true })
-           .font('Helvetica').text(task.Solicitante || 'N/A');
-           
+            .font('Helvetica').text(task.Solicitante || 'N/A');
+
         doc.font('Helvetica-Bold').text('Hora Solicitada: ', { continued: true })
-           .font('Helvetica').text(horaInicioStr);
+            .font('Helvetica').text(horaInicioStr);
 
         // 3. RECUADRO GRIS DERECHO (Falla Reportada)
         const rightBoxX = 305;
@@ -774,17 +847,17 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         const feedbackY = 420;
         doc.fontSize(11).font('Helvetica-Bold').fillColor('#443891'); // Color morado para el título
         doc.text('DEVOLUCIÓN TÉCNICA', leftBoxX, feedbackY);
-        
+
         doc.moveDown(0.5);
         doc.fontSize(10).fillColor('#333333');
         const tecnicoName = task.TecnicoNombre || req.session.userName || 'No asignado';
-        
+
         doc.font('Helvetica-Bold').text('Técnico: ', { continued: true })
-           .font('Helvetica').text(tecnicoName);
-           
+            .font('Helvetica').text(tecnicoName);
+
         doc.font('Helvetica-Bold').text('Hora de Finalización: ', { continued: true })
-           .font('Helvetica').text(horaFinStr);
-        
+            .font('Helvetica').text(horaFinStr);
+
         doc.moveDown(1);
         doc.font('Helvetica-Bold').text('DIAGNÓSTICO / TRABAJO REALIZADO:');
         doc.moveDown(0.5);

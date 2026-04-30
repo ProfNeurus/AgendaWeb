@@ -59,3 +59,32 @@ Para marcar una versión estable (ejemplo: v1.0, v1.1):
 ## 5. RECURSOS ÚTILES
 Repositorio actual: https://github.com/ProfNeurus/AgendaWeb
 Branch principal: main
+
+
+Trajaar en distintas VERSIONES
+
+1. Etiquetar la versión actual (Tag)
+Una "etiqueta" o Tag es como una foto fija de tu código en este momento. Como ya tienes las versiones v1.0 y v1.1, te sugiero llamar a esta v1.2.
+
+Ejecuta este comando para marcar el estado actual:
+
+powershell
+git tag -a v1.2 -m "Version definitiva con auto-refresco cada 15 min"
+2. Crear una nueva rama para la Versión 2.0 (Branch)
+En lugar de trabajar sobre la misma línea, puedes crear una "rama" nueva. Esto separa completamente el desarrollo de la versión 2.0 de la versión actual.
+
+Ejecuta:
+
+powershell
+git checkout -b version-2.0
+Ahora todo lo que hagas y guardes se quedará en la rama version-2.0.
+
+¿Cómo volver atrás si lo necesitas?
+Si en algún momento quieres volver a ver o usar la versión definitiva (v1.2), solo tienes que hacer:
+
+powershell
+git checkout v1.2
+Y para volver a seguir trabajando en la 2.0:
+
+powershell
+git checkout version-2.0
