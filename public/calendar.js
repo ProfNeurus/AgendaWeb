@@ -510,98 +510,105 @@ function renderWeekView() {
         weekHeader.appendChild(cell);
     }
 
-    // Generar body con horas (8:00 a 24:00)
+    // Generar body con horas (8:00 a 24:00 cada 30 min)
     const weekBody = document.getElementById('weekBody');
     weekBody.innerHTML = '';
 
+    const slotHeight = 40; // Altura de cada slot de 30 min
+
     for (let hour = 8; hour <= 24; hour++) {
-        const row = document.createElement('div');
-        row.className = 'week-row';
+        for (let minute of [0, 30]) {
+            if (hour === 24 && minute > 0) continue;
 
-        // Celda de hora
-        const timeCell = document.createElement('div');
-        timeCell.className = 'time-cell';
-        const displayHour = hour === 24 ? 0 : hour;
-        timeCell.textContent = `${displayHour.toString().padStart(2, '0')}:00`;
-        row.appendChild(timeCell);
+            const row = document.createElement('div');
+            row.className = 'week-row' + (minute !== 0 ? ' half-row' : '');
 
-        // Celdas de días
-        for (let i = 0; i < 6; i++) {
-            const day = new Date(weekStart);
-            day.setDate(weekStart.getDate() + i);
-            day.setHours(0, 0, 0, 0);
+            // Celda de hora
+            const timeCell = document.createElement('div');
+            timeCell.className = 'time-cell';
+            const displayHour = hour === 24 ? 0 : hour;
+            timeCell.textContent = `${displayHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            row.appendChild(timeCell);
 
-            const dayCell = document.createElement('div');
-            dayCell.className = 'day-cell';
+            // Celdas de días
+            for (let i = 0; i < 6; i++) {
+                const day = new Date(weekStart);
+                day.setDate(weekStart.getDate() + i);
+                day.setHours(0, 0, 0, 0);
 
-            if (day.getTime() === today.getTime()) {
-                dayCell.classList.add('today');
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+
+                if (day.getTime() === today.getTime()) {
+                    dayCell.classList.add('today');
+                }
+                if (selectedDate && day.getTime() === selectedDate.getTime()) {
+                    dayCell.classList.add('selected');
+                }
+
+                // Buscar tareas para este día que EMPIECEN en este intervalo de 30 min
+                const dayTasks = getTasksForDate(day);
+                const startingTasks = dayTasks.filter(task => taskStartsInInterval(task, hour, minute));
+
+                startingTasks.forEach((task, index) => {
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'time-task ' + getTaskColorClass(task);
+
+                    // Calcular duración para altura
+                    const duration = getTaskDurationHours(task);
+
+                    // Posicionamiento absoluto para no romper el grid y soporte de minutos
+                    taskEl.style.position = 'absolute';
+                    taskEl.style.zIndex = '10';
+
+                    const taskDate = new Date(task.FechaPrometido);
+                    // El offset es relativo a este bloque de 30 minutos
+                    const topOffset = ((taskDate.getMinutes() % 30) / 30) * slotHeight;
+                    taskEl.style.top = `${topOffset}px`;
+
+                    // Dividir el ancho para tareas superpuestas según pre-procesamiento
+                    const maxCols = task._maxCols || 1;
+                    const colIndex = task._colIndex || 0;
+                    const widthPercent = 100 / maxCols;
+                    const isOverlapped = maxCols > 1;
+                    if (isOverlapped) {
+                        taskEl.classList.add('compact-task');
+                    }
+                    taskEl.style.width = `calc(${widthPercent}% - 2px)`;
+                    taskEl.style.left = `calc(${colIndex * widthPercent}%)`;
+
+                    // Altura proporcional a la duración (duration está en horas, slotHeight es 30 min)
+                    taskEl.style.height = `${Math.max(25, (duration * 2) * slotHeight - 2)}px`;
+                    if (duration < 0.7) {
+                        taskEl.classList.add('short-task');
+                    }
+
+                    // Mostrar hora de inicio y fin
+                    const endTime = getTaskEndTime(task);
+                    const startHour = new Date(task.FechaPrometido).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    const endHourStr = endTime ? endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const clientName = escapeHtml(task.ClienteNombre || 'Sin cliente');
+                    if (isOverlapped) {
+                        taskEl.innerHTML = `
+                            <div class="task-title">${clientName}</div>
+                        `;
+                    } else {
+                        taskEl.innerHTML = `
+                            <div class="task-title">${escapeHtml(task.ClienteNombre.substring(0, 12) + (task.ClienteNombre.length > 12 ? '...' : ''))}</div>
+                            <div class="task-time">${startHour} - ${endHourStr}</div>
+                        `;
+                    }
+                    taskEl.title = `${task.ClienteNombre} (${startHour} - ${endHourStr})`;
+                    taskEl.addEventListener('click', () => showTaskDetail(task));
+                    dayCell.appendChild(taskEl);
+                });
+
+                dayCell.addEventListener('click', () => selectDate(day));
+                row.appendChild(dayCell);
             }
-            if (selectedDate && day.getTime() === selectedDate.getTime()) {
-                dayCell.classList.add('selected');
-            }
 
-            // Buscar tareas para este día
-            const dayTasks = getTasksForDate(day);
-            const startingTasks = dayTasks.filter(task => taskStartsAtHour(task, hour));
-
-            startingTasks.forEach((task, index) => {
-                const taskEl = document.createElement('div');
-                taskEl.className = 'time-task ' + getTaskColorClass(task);
-
-                // Calcular duración para altura
-                const duration = getTaskDurationHours(task);
-                const slotHeight = 50; // Altura de cada slot de hora
-
-                // Posicionamiento absoluto para no romper el grid y soporte de minutos
-                taskEl.style.position = 'absolute';
-                taskEl.style.zIndex = '10';
-
-                const taskDate = new Date(task.FechaPrometido);
-                const topOffset = (taskDate.getMinutes() / 60) * slotHeight;
-                taskEl.style.top = `${topOffset}px`;
-
-                // Dividir el ancho para tareas superpuestas según pre-procesamiento
-                const maxCols = task._maxCols || 1;
-                const colIndex = task._colIndex || 0;
-                const widthPercent = 100 / maxCols;
-                const isOverlapped = maxCols > 1;
-                if (isOverlapped) {
-                    taskEl.classList.add('compact-task');
-                }
-                taskEl.style.width = `calc(${widthPercent}% - 2px)`;
-                taskEl.style.left = `calc(${colIndex * widthPercent}%)`;
-
-                taskEl.style.height = `${Math.max(25, duration * slotHeight - 2)}px`;
-                if (duration < 0.7) {
-                    taskEl.classList.add('short-task');
-                }
-
-                // Mostrar hora de inicio y fin
-                const endTime = getTaskEndTime(task);
-                const startHour = new Date(task.FechaPrometido).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                const endHourStr = endTime ? endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-                const clientName = escapeHtml(task.ClienteNombre || 'Sin cliente');
-                if (isOverlapped) {
-                    taskEl.innerHTML = `
-                        <div class="task-title">${clientName}</div>
-                    `;
-                } else {
-                    taskEl.innerHTML = `
-                        <div class="task-title">${escapeHtml(task.ClienteNombre.substring(0, 12) + (task.ClienteNombre.length > 12 ? '...' : ''))}</div>
-                        <div class="task-time">${startHour} - ${endHourStr}</div>
-                    `;
-                }
-                taskEl.title = `${task.ClienteNombre} (${startHour} - ${endHourStr})`;
-                taskEl.addEventListener('click', () => showTaskDetail(task));
-                dayCell.appendChild(taskEl);
-            });
-
-            dayCell.addEventListener('click', () => selectDate(day));
-            row.appendChild(dayCell);
+            weekBody.appendChild(row);
         }
-
-        weekBody.appendChild(row);
     }
 }
 
@@ -620,86 +627,91 @@ function renderDayView() {
     const dayBody = document.getElementById('dayBody');
     dayBody.innerHTML = '';
 
+    const slotHeight = 40; // Altura base para 30 min
+
     for (let hour = 8; hour <= 24; hour++) {
-        const row = document.createElement('div');
-        row.className = 'day-row';
+        for (let minute of [0, 30]) {
+            if (hour === 24 && minute > 0) continue;
 
-        // Celda de hora
-        const timeCell = document.createElement('div');
-        timeCell.className = 'time-cell';
-        const displayHour = hour === 24 ? 0 : hour;
-        timeCell.textContent = `${displayHour.toString().padStart(2, '0')}:00`;
-        row.appendChild(timeCell);
+            const row = document.createElement('div');
+            row.className = 'day-row' + (minute !== 0 ? ' half-row' : '');
 
-        // Área de tareas
-        const taskArea = document.createElement('div');
-        taskArea.className = 'day-task-area';
+            // Celda de hora
+            const timeCell = document.createElement('div');
+            timeCell.className = 'time-cell';
+            const displayHour = hour === 24 ? 0 : hour;
+            timeCell.textContent = `${displayHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            row.appendChild(timeCell);
 
-        // Buscar tareas para este día
-        const dayTasks = getTasksForDate(currentDay);
-        const startingTasks = dayTasks.filter(task => taskStartsAtHour(task, hour));
+            // Área de tareas
+            const taskArea = document.createElement('div');
+            taskArea.className = 'day-task-area';
 
-        if (startingTasks.length === 0) {
-            const emptyCell = document.createElement('div');
-            emptyCell.style.cssText = 'height: 42px; border-bottom: 1px dashed var(--border-color);';
-            taskArea.appendChild(emptyCell);
+            // Buscar tareas para este día que EMPIECEN en este intervalo
+            const dayTasks = getTasksForDate(currentDay);
+            const startingTasks = dayTasks.filter(task => taskStartsInInterval(task, hour, minute));
+
+            if (startingTasks.length === 0) {
+                const emptyCell = document.createElement('div');
+                emptyCell.style.cssText = `height: ${slotHeight - 8}px; border-bottom: 1px dashed transparent;`;
+                taskArea.appendChild(emptyCell);
+            }
+
+            startingTasks.forEach((task, index) => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'day-time-task ' + getTaskColorClass(task);
+
+                // Calcular duración para altura
+                const duration = getTaskDurationHours(task);
+
+                // Posicionamiento absoluto
+                taskEl.style.position = 'absolute';
+                taskEl.style.zIndex = '10';
+
+                const taskDate = new Date(task.FechaPrometido);
+                const topOffset = ((taskDate.getMinutes() % 30) / 30) * slotHeight;
+                taskEl.style.top = `${topOffset}px`;
+
+                // Dividir ancho superpuestas
+                const maxCols = task._maxCols || 1;
+                const colIndex = task._colIndex || 0;
+                const widthPercent = 100 / maxCols;
+                const isOverlapped = maxCols > 1;
+                if (isOverlapped) {
+                    taskEl.classList.add('compact-task');
+                }
+                taskEl.style.width = `calc(${widthPercent}% - 8px)`;
+                taskEl.style.left = `calc(${colIndex * widthPercent}% + 4px)`;
+
+                taskEl.style.height = `${Math.max(25, (duration * 2) * slotHeight - 4)}px`;
+                if (duration < 0.7) {
+                    taskEl.classList.add('short-task');
+                }
+
+                // Mostrar hora de inicio y fin
+                const endTime = getTaskEndTime(task);
+                const startHour = new Date(task.FechaPrometido).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                const endHourStr = endTime ? endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                if (isOverlapped) {
+                    taskEl.innerHTML = `
+                        <div class="task-title">${escapeHtml(task.ClienteNombre || 'Sin cliente')}</div>
+                    `;
+                } else {
+                    taskEl.innerHTML = `
+                        <div class="task-title">${escapeHtml(task.ClienteNombre || 'Sin cliente')}</div>
+                        <div class="task-time">${startHour} - ${endHourStr}</div>
+                        <div class="task-info">${escapeHtml(task.Solicitante || 'Sin solicitante')}</div>
+                    `;
+                }
+                taskEl.title = `${task.ClienteNombre} (${startHour} - ${endHourStr})`;
+
+                taskEl.addEventListener('click', () => showTaskDetail(task));
+                taskArea.appendChild(taskEl);
+            });
+
+            row.appendChild(taskArea);
+            dayBody.appendChild(row);
         }
-
-        startingTasks.forEach((task, index) => {
-            const taskEl = document.createElement('div');
-            taskEl.className = 'day-time-task ' + getTaskColorClass(task);
-
-            // Calcular duración para altura
-            const duration = getTaskDurationHours(task);
-            const slotHeight = 50; // Altura base
-
-            // Posicionamiento absoluto
-            taskEl.style.position = 'absolute';
-            taskEl.style.zIndex = '10';
-
-            const taskDate = new Date(task.FechaPrometido);
-            const topOffset = (taskDate.getMinutes() / 60) * slotHeight;
-            taskEl.style.top = `${topOffset}px`;
-
-            // Dividir ancho superpuestas
-            const maxCols = task._maxCols || 1;
-            const colIndex = task._colIndex || 0;
-            const widthPercent = 100 / maxCols;
-            const isOverlapped = maxCols > 1;
-            if (isOverlapped) {
-                taskEl.classList.add('compact-task');
-            }
-            taskEl.style.width = `calc(${widthPercent}% - 8px)`;
-            taskEl.style.left = `calc(${colIndex * widthPercent}% + 4px)`;
-
-            taskEl.style.height = `${Math.max(25, duration * slotHeight - 4)}px`;
-            if (duration < 0.7) {
-                taskEl.classList.add('short-task');
-            }
-
-            // Mostrar hora de inicio y fin
-            const endTime = getTaskEndTime(task);
-            const startHour = new Date(task.FechaPrometido).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            const endHourStr = endTime ? endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-            if (isOverlapped) {
-                taskEl.innerHTML = `
-                    <div class="task-title">${escapeHtml(task.ClienteNombre || 'Sin cliente')}</div>
-                `;
-            } else {
-                taskEl.innerHTML = `
-                    <div class="task-title">${escapeHtml(task.ClienteNombre || 'Sin cliente')}</div>
-                    <div class="task-time">${startHour} - ${endHourStr}</div>
-                    <div class="task-info">${escapeHtml(task.Solicitante || 'Sin solicitante')}</div>
-                `;
-            }
-            taskEl.title = `${task.ClienteNombre} (${startHour} - ${endHourStr})`;
-
-            taskEl.addEventListener('click', () => showTaskDetail(task));
-            taskArea.appendChild(taskEl);
-        });
-
-        row.appendChild(taskArea);
-        dayBody.appendChild(row);
     }
 }
 
@@ -743,7 +755,18 @@ function getTasksForDateAndHour(date, hour) {
     });
 }
 
-// Verificar si una tarea comienza en esta hora específica
+// Verificar si una tarea comienza en este intervalo de 30 min
+function taskStartsInInterval(task, hour, minute) {
+    if (!task.FechaPrometido) return false;
+    const taskDate = new Date(task.FechaPrometido);
+    const taskHour = taskDate.getHours();
+    const taskMin = taskDate.getMinutes();
+    
+    // El intervalo es [hour:minute, hour:minute + 30)
+    return taskHour === hour && taskMin >= minute && taskMin < minute + 30;
+}
+
+// Verificar si una tarea comienza en esta hora específica (MANTENIDO PARA COMPATIBILIDAD SI SE USA EN OTRO LADO)
 function taskStartsAtHour(task, hour) {
     if (!task.FechaPrometido) return false;
     const taskDate = new Date(task.FechaPrometido);

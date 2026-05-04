@@ -740,7 +740,11 @@ body {
     display: grid;
     grid-template-columns: 60px repeat(6, 1fr);
     border-bottom: 1px solid var(--border-color);
-    min-height: 50px;
+    min-height: 40px;
+}
+
+.week-row.half-row, .day-row.half-row {
+    border-bottom: 1px dashed var(--border-color);
 }
 
 .week-row:last-child {
@@ -749,19 +753,21 @@ body {
 
 .time-cell {
     background: var(--surface-alt);
-    padding: 8px;
+    padding: 4px 8px;
     text-align: start;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     color: var(--text-muted);
     font-weight: 500;
     border-right: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
 }
 
 .day-cell {
     border-right: 1px solid var(--border-color);
-    padding: 2px;
+    padding: 0px;
     position: relative;
-    min-height: 50px;
+    min-height: 40px;
 }
 
 .day-cell:last-child {
@@ -877,7 +883,7 @@ body {
     display: grid;
     grid-template-columns: 60px 1fr;
     border-bottom: 1px solid var(--border-color);
-    min-height: 50px;
+    min-height: 40px;
 }
 
 .day-row:last-child {
