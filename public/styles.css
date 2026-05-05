@@ -1934,30 +1934,43 @@ body {
         max-height: 50px;
     }
 
-    /* Vista semanal en móvil */
+    /* Vista semanal en móvil - Compacta para entrar en pantalla */
     .week-view-grid {
-        overflow-x: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
     }
 
     .week-header {
-        min-width: 600px;
+        grid-template-columns: 40px repeat(6, 1fr);
+        min-width: 100%;
+    }
+
+    .week-row {
+        grid-template-columns: 40px repeat(6, 1fr);
     }
 
     .week-body {
-        min-width: 600px;
+        min-width: 100%;
     }
 
     .week-header-cell {
-        padding: 8px 4px;
-        font-size: 0.75rem;
+        padding: 4px 1px;
+        font-size: 0.6rem;
+        word-break: break-word;
+    }
+
+    .time-cell {
+        padding: 2px;
+        font-size: 0.55rem;
+        justify-content: center;
     }
 
     .time-task {
-        font-size: 0.65rem;
-        padding: 2px 4px;
+        font-size: 0.55rem;
+        padding: 1px 2px;
+        margin: 1px;
+        line-height: 1.1;
     }
-
     /* Vista diaria en móvil */
     .day-header h3 {
         font-size: 0.95rem;
