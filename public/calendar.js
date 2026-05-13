@@ -17,10 +17,7 @@ let currentClienteId = null;
 const isMobile = () => window.innerWidth <= 768;
 const isSmallMobile = () => window.innerWidth <= 480;
 
-// Vista inicial según dispositivo
-if (isMobile()) {
-    currentView = 'day'; // En móvil, iniciar con vista diaria por defecto
-}
+// (Eliminado el override de vista diaria en móvil para iniciar siempre en semanal)
 
 // Elementos DOM
 const calendarDays = document.getElementById('calendarDays');
@@ -179,7 +176,8 @@ async function checkSession() {
 
         // Cargar tareas
         await loadTasks();
-        render();
+        // Renderizar vista inicial sincronizada
+        switchView(currentView);
 
         // Iniciar auto-refresco cada 15 minutos
         startAutoRefresh();
