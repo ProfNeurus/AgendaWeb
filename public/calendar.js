@@ -1401,6 +1401,8 @@ function switchClienteTab(tabName) {
         loadClienteServicios(currentClienteId);
     } else if (tabName === 'contactos') {
         loadClienteContactos(currentClienteId);
+    } else if (tabName === 'llaves') {
+        loadClienteLlaves(currentClienteId);
     }
 }
 
@@ -1486,6 +1488,52 @@ async function loadClienteContactos(clienteId) {
     } catch (error) {
         console.error('Error cargando contactos:', error);
         container.innerHTML = '<div class="empty-state"><p>Error al cargar contactos.</p></div>';
+    }
+}
+
+async function loadClienteLlaves(clienteId) {
+    const container = document.getElementById('clienteLlavesContent');
+    container.innerHTML = '<div class="loading-state">Cargando llaves...</div>';
+    
+    try {
+        const response = await fetch(`/api/cliente/${clienteId}/llaves`);
+        const data = await response.json();
+        
+        if (data.success && data.llaves.length > 0) {
+            container.innerHTML = `
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>N° Serie</th>
+                                <th>Modelo</th>
+                                <th>Marca</th>
+                                <th>Puestos</th>
+                                <th>Licencia</th>
+                                <th>Producto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.llaves.map(llave => `
+                                <tr>
+                                    <td><strong>${escapeHtml(llave.N_Serie)}</strong></td>
+                                    <td>${escapeHtml(llave.Modelo || '-')}</td>
+                                    <td>${escapeHtml(llave.Marca || '-')}</td>
+                                    <td>${escapeHtml(llave.CA_Cant_Puestos || '-')}</td>
+                                    <td>${escapeHtml(llave.CA_Licencia || '-')}</td>
+                                    <td>${escapeHtml(llave.CA_Producto || '-')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<div class="empty-state"><p>No hay llaves registradas para este cliente.</p></div>';
+        }
+    } catch (error) {
+        console.error('Error cargando llaves:', error);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar llaves.</p></div>';
     }
 }
 
