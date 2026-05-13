@@ -1645,9 +1645,12 @@ body {
 }
 
 /* Secondary Modals */
-.secondary-modal,
-.tertiary-modal {
+.secondary-modal {
     z-index: 1100;
+}
+
+.tertiary-modal {
+    z-index: 1200;
 }
 
 .secondary-content {
