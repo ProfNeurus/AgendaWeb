@@ -29,6 +29,18 @@
                     <span class="theme-icon" aria-hidden="true">🌙</span>
                     <span class="theme-toggle-text">Modo oscuro</span>
                 </button>
+                <button id="notificationToggle" class="notification-toggle-button" aria-label="Notificaciones">
+                    <span class="notif-icon" aria-hidden="true">🔔</span>
+                    <span class="notif-toggle-text">Notificaciones</span>
+                </button>
+                <button id="exportBtn" class="export-button" aria-label="Exportar tareas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Exportar</span>
+                </button>
                 <button id="logoutBtn" class="logout-button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -425,6 +437,43 @@
                     <!-- Resultados de la búsqueda -->
                     <div class="search-empty-state">
                         <p>Ingrese un número de serie para comenzar la búsqueda</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Exportación CSV -->
+    <div id="exportModal" class="modal secondary-modal">
+        <div class="modal-content secondary-content export-modal-content">
+            <div class="modal-header">
+                <h3>Exportar Tareas a CSV</h3>
+                <button class="close-button" onclick="closeExportModal()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="export-description">Seleccione el rango de fechas para exportar sus tareas en formato CSV.</p>
+                <div class="export-form">
+                    <div class="form-group">
+                        <label for="exportDateFrom">Fecha Desde:</label>
+                        <input type="date" id="exportDateFrom" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="exportDateTo">Fecha Hasta:</label>
+                        <input type="date" id="exportDateTo" class="form-input">
+                    </div>
+                    <div class="export-actions">
+                        <button id="btnCancelExport" class="btn-secondary" onclick="closeExportModal()">Cancelar</button>
+                        <button id="btnProcessExport" class="btn-primary-action">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Procesar
+                        </button>
                     </div>
                 </div>
             </div>

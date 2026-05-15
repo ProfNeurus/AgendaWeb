@@ -13,6 +13,11 @@ const THEME_STORAGE_KEY = 'agenda-theme';
 let refreshInterval = null;
 let currentClienteId = null;
 
+// Estados de notificación
+let lastTaskIds = new Set();
+let notifiedUpcomingIds = new Set();
+let upcomingCheckInterval = null;
+
 // Detectar si es móvil
 const isMobile = () => window.innerWidth <= 768;
 const isSmallMobile = () => window.innerWidth <= 480;
@@ -85,6 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Enter') searchLlaves();
         });
     }
+
+    // Exportación
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.addEventListener('click', openExportModal);
+    const btnProcessExport = document.getElementById('btnProcessExport');
+    if (btnProcessExport) btnProcessExport.addEventListener('click', processExport);
+
+    // Inicializar notificaciones
+    initNotifications();
 });
 
 function initTheme() {
@@ -131,6 +145,131 @@ function updateThemeToggleButton(theme) {
     }
 
     themeToggleBtn.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+}
+
+// --- Gestión de Notificaciones ---
+
+function initNotifications() {
+    const notifToggleBtn = document.getElementById('notificationToggle');
+    if (notifToggleBtn) {
+        notifToggleBtn.addEventListener('click', toggleNotifications);
+        updateNotificationButton();
+    }
+
+    // Iniciar el chequeo de tareas próximas cada minuto
+    if (upcomingCheckInterval) clearInterval(upcomingCheckInterval);
+    upcomingCheckInterval = setInterval(checkUpcomingTasks, 60 * 1000);
+}
+
+async function toggleNotifications() {
+    console.log('toggleNotifications llamada. Permiso actual:', Notification.permission);
+    if (!("Notification" in window)) {
+        alert("Este navegador no soporta notificaciones de escritorio");
+        return;
+    }
+
+    if (Notification.permission === "granted") {
+        console.log('Permiso ya concedido. Enviando notificación de prueba...');
+        showNotification("Notificaciones Activas", { 
+            body: "El sistema de alertas está funcionando correctamente.",
+            tag: 'test-notification'
+        });
+    } else if (Notification.permission !== "denied") {
+        console.log('Solicitando permiso...');
+        const permission = await Notification.requestPermission();
+        console.log('Resultado de la solicitud:', permission);
+        updateNotificationButton();
+        if (permission === "granted") {
+            showNotification("Notificaciones Habilitadas", { 
+                body: "Te avisaremos cuando tengas nuevas tareas o falten 10 min.",
+                tag: 'welcome-notification'
+            });
+        }
+    } else {
+        alert("Las notificaciones están bloqueadas en tu navegador. Por favor, habilítalas en la configuración del sitio (clic en el candado junto a la URL).");
+    }
+}
+
+function updateNotificationButton() {
+    const notifToggleBtn = document.getElementById('notificationToggle');
+    if (!notifToggleBtn) return;
+
+    const notifIcon = notifToggleBtn.querySelector('.notif-icon');
+    const notifText = notifToggleBtn.querySelector('.notif-toggle-text');
+    const permission = Notification.permission;
+
+    notifToggleBtn.classList.remove('enabled', 'blocked');
+
+    if (permission === "granted") {
+        notifToggleBtn.classList.add('enabled');
+        if (notifIcon) notifIcon.textContent = '🔔';
+        if (notifText) notifText.textContent = 'Notif. Activas';
+    } else if (permission === "denied") {
+        notifToggleBtn.classList.add('blocked');
+        if (notifIcon) notifIcon.textContent = '🔕';
+        if (notifText) notifText.textContent = 'Notif. Bloqueadas';
+    } else {
+        if (notifIcon) notifIcon.textContent = '🔔';
+        if (notifText) notifText.textContent = 'Activar Notif.';
+    }
+}
+
+function showNotification(title, options = {}) {
+    console.log('Intentando mostrar notificación:', title, options);
+    if (Notification.permission === "granted") {
+        try {
+            const defaultOptions = {
+                icon: '/favicon.ico',
+                badge: '/favicon.ico',
+                silent: false
+            };
+            const n = new Notification(title, { ...defaultOptions, ...options });
+            n.onclick = function() {
+                window.focus();
+                this.close();
+            };
+            console.log('Notificación creada exitosamente');
+        } catch (e) {
+            console.error('Error al crear la notificación:', e);
+        }
+    } else {
+        console.warn('No se mostró la notificación porque el permiso es:', Notification.permission);
+    }
+}
+
+/**
+ * Revisa si hay tareas que comiencen en los próximos 10 minutos
+ */
+function checkUpcomingTasks() {
+    if (tasks.length === 0) return;
+
+    const now = new Date();
+    const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+    const elevenMinutesFromNow = new Date(now.getTime() + 11 * 60 * 1000);
+
+    tasks.forEach(task => {
+        if (!task.FechaPrometido || task.ID_Estado === 'CER' || task.ID_Estado === 'TRE') return;
+
+        const startTime = new Date(task.FechaPrometido);
+        const diffMs = startTime - now;
+        const diffMin = diffMs / (1000 * 60);
+
+        // Debug log cada minuto para ver qué tareas están cerca
+        if (diffMin > 0 && diffMin < 60) {
+            console.log(`Tarea cercana: ${task.ClienteNombre} en ${Math.round(diffMin)} min`);
+        }
+        
+        // Si la tarea empieza en el rango de los próximos 10-11 minutos y no ha sido notificada
+        if (diffMin > 9 && diffMin <= 11 && !notifiedUpcomingIds.has(task.ID_PEDIDOSERVICIO)) {
+            console.log('¡Disparando notificación de 10 minutos para tarea:', task.ID_PEDIDOSERVICIO);
+            showNotification("Tarea próxima a empezar", {
+                body: `En 10 minutos: ${task.ClienteNombre}\n${task.Falla || ''}`,
+                requireInteraction: true,
+                tag: 'upcoming-' + task.ID_PEDIDOSERVICIO
+            });
+            notifiedUpcomingIds.add(task.ID_PEDIDOSERVICIO);
+        }
+    });
 }
 
 // Manejar cambios de tamaño de pantalla
@@ -195,7 +334,24 @@ async function loadTasks() {
         const data = await response.json();
 
         if (data.success) {
-            tasks = data.tasks || [];
+            const newTasks = data.tasks || [];
+            
+            // Detectar nuevas tareas para notificar (si no es la primera carga)
+            if (lastTaskIds.size > 0) {
+                newTasks.forEach(task => {
+                    if (!lastTaskIds.has(task.ID_PEDIDOSERVICIO)) {
+                        showNotification("Nueva tarea asignada", {
+                            body: `${task.ClienteNombre}\n${task.Falla || ''}`,
+                            requireInteraction: true
+                        });
+                    }
+                });
+            }
+
+            // Actualizar set de IDs vistos
+            lastTaskIds = new Set(newTasks.map(t => t.ID_PEDIDOSERVICIO));
+            
+            tasks = newTasks;
             preprocessOverlaps(tasks);
             updateStats();
         } else {
@@ -207,14 +363,14 @@ async function loadTasks() {
 }
 
 /**
- * Inicia el proceso de refresco automático cada 15 minutos.
+ * Inicia el proceso de refresco automático cada 5 minutos.
  * Solo refresca si no hay ningún modal abierto para no interrumpir al usuario.
  */
 function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
     
-    // 15 minutos = 15 * 60 * 1000 ms
-    const REFRESH_TIME = 15 * 60 * 1000;
+    // 5 minutos = 5 * 60 * 1000 ms (Actualizado de 15 a 5 min)
+    const REFRESH_TIME = 5 * 60 * 1000;
     
     refreshInterval = setInterval(async () => {
         // Verificar si hay algún modal abierto
@@ -233,6 +389,119 @@ function startAutoRefresh() {
             console.log('Refresco automático pospuesto: hay un modal abierto.');
         }
     }, REFRESH_TIME);
+}
+
+// --- Gestión de Exportación CSV ---
+
+function openExportModal() {
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        // Pre-setear fechas (hoy por defecto)
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('exportDateFrom').value = today;
+        document.getElementById('exportDateTo').value = today;
+        
+        exportModal.classList.add('show');
+        exportModal.style.display = 'block';
+    }
+}
+
+function closeExportModal() {
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.classList.remove('show');
+        exportModal.style.display = 'none';
+    }
+}
+
+function processExport() {
+    const dateFromStr = document.getElementById('exportDateFrom').value;
+    const dateToStr = document.getElementById('exportDateTo').value;
+
+    if (!dateFromStr || !dateToStr) {
+        alert("Por favor, seleccione ambas fechas.");
+        return;
+    }
+
+    // Usar split para evitar problemas de zona horaria con el constructor Date(string)
+    const [yearFrom, monthFrom, dayFrom] = dateFromStr.split('-').map(Number);
+    const dateFrom = new Date(yearFrom, monthFrom - 1, dayFrom, 0, 0, 0, 0);
+
+    const [yearTo, monthTo, dayTo] = dateToStr.split('-').map(Number);
+    const dateTo = new Date(yearTo, monthTo - 1, dayTo, 23, 59, 59, 999);
+
+    if (dateTo < dateFrom) {
+        alert("La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'.");
+        return;
+    }
+
+    // Filtrar tareas en el rango
+    const filteredTasks = tasks.filter(task => {
+        if (!task.FechaPrometido) return false;
+        const taskDate = new Date(task.FechaPrometido);
+        return taskDate >= dateFrom && taskDate <= dateTo;
+    });
+
+    if (filteredTasks.length === 0) {
+        alert("No se encontraron tareas en el rango de fechas seleccionado.");
+        return;
+    }
+
+    // Generar contenido CSV
+    // Encabezado: FECHA;CLIENTE;NRO_PEDIDO_SERVICIO;DEVOLUCION;HORA_DESDE;HORA_HASTA
+    let csvContent = "FECHA;CLIENTE;NRO_PEDIDO_SERVICIO;DEVOLUCION;HORA_DESDE;HORA_HASTA\r\n";
+
+    filteredTasks.forEach(task => {
+        const startDate = new Date(task.FechaPrometido);
+        const endDate = getTaskEndTime(task);
+        
+        const fecha = formatDateDDMMAAAA(startDate);
+        const cliente = escapeCSV(task.ClienteNombre || '');
+        const nroPedido = task.ID_PEDIDOSERVICIO || '';
+        const devolucion = escapeCSV(task.Diagnostico || '');
+        const horaDesde = formatTimeHHMM(startDate);
+        const horaHasta = endDate ? formatTimeHHMM(endDate) : '';
+
+        csvContent += `${fecha};${cliente};${nroPedido};${devolucion};${horaDesde};${horaHasta}\r\n`;
+    });
+
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    // Formatear fechas para el nombre del archivo (dd-mm-aaaa)
+    const fileNameFrom = formatDateDDMMAAAA(dateFrom);
+    const fileNameTo = formatDateDDMMAAAA(dateTo);
+    const fileName = `PedidosServicios ${fileNameFrom} al ${fileNameTo}.csv`;
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    closeExportModal();
+}
+
+function formatDateDDMMAAAA(date) {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+}
+
+function formatTimeHHMM(date) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function escapeCSV(text) {
+    if (!text) return "";
+    // Reemplazar punto y coma por coma para no romper el formato, y quitar saltos de línea
+    return text.toString().replace(/;/g, ',').replace(/\r?\n|\r/g, ' ');
 }
 
 // Pre-procesar tareas para calcular superposiciones en la grilla y asignarle a cada tarea una columna 

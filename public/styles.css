@@ -438,8 +438,107 @@ body {
     color: var(--primary-color);
 }
 
-.theme-icon {
+.notification-toggle-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.notification-toggle-button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.notification-toggle-button.enabled {
+    background: var(--success-light);
+    color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.notification-toggle-button.blocked {
+    background: var(--danger-light);
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+    cursor: not-allowed;
+}
+
+.export-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.export-button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.export-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.theme-icon, .notif-icon {
     line-height: 1;
+}
+
+/* Export Modal Specific Styles */
+.export-modal-content {
+    max-width: 400px !important;
+}
+
+.export-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.export-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.export-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-secondary:hover {
+    background: var(--border-color);
 }
 
 /* Main Container */
