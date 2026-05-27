@@ -1731,6 +1731,20 @@ body {
     transition: var(--transition);
 }
 
+.btn-client-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.btn-client-action:disabled:hover {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    box-shadow: none;
+    transform: none;
+}
+
 .btn-client-action:hover {
     background: var(--primary-color);
     color: white;

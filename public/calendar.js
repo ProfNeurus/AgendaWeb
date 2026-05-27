@@ -1239,13 +1239,6 @@ async function showTaskDetail(task) {
                                 <span class="detail-label">Cliente</span>
                                 <span class="detail-value">${escapeHtml(detail.ClienteNombre || 'Sin cliente')}</span>
                                 <div class="client-action-buttons">
-                                    <button type="button" class="btn-client-action" onclick="openMailsModal(${detail.ID_Cliente})">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                                            <polyline points="22,6 12,13 2,6"/>
-                                        </svg>
-                                        Mails
-                                    </button>
                                     <button type="button" class="btn-client-action" onclick="openContactosModal(${detail.ID_Cliente})">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
