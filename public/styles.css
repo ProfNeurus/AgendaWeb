@@ -814,7 +814,7 @@ body {
 
 .week-header {
     display: grid;
-    grid-template-columns: 60px repeat(6, 1fr);
+    grid-template-columns: 60px repeat(7, 1fr);
     background: var(--primary-color);
 }
 
@@ -837,7 +837,7 @@ body {
 
 .week-row {
     display: grid;
-    grid-template-columns: 60px repeat(6, 1fr);
+    grid-template-columns: 60px repeat(7, 1fr);
     border-bottom: 1px solid var(--border-color);
     min-height: 40px;
 }
