@@ -90,6 +90,14 @@
                     </svg>
                     Llaves
                 </button>
+                <button id="btnArchivos" class="header-action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Archivos
+                </button>
             </div>
             <div class="view-switcher">
                 <button id="viewMonth" class="view-button">Mes</button>
@@ -474,6 +482,58 @@
                             </svg>
                             Procesar
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Archivos Compartidos (v3.0) -->
+    <div id="archivosModal" class="modal secondary-modal">
+        <div class="modal-content secondary-content archivos-modal-content">
+            <div class="modal-header">
+                <h3>Compartir Archivos</h3>
+                <button class="close-button" onclick="closeArchivosModal()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Drop Zone de Carga -->
+                <div id="uploadDragZone" class="upload-drag-zone">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>Arrastra archivos aquí o <span class="browse-link">selecciona un archivo</span></p>
+                    <input type="file" id="fileInput" style="display: none;">
+                    <span class="upload-limit-info">Tamaño máximo de archivo: 50MB</span>
+                </div>
+                
+                <!-- Barra de progreso -->
+                <div id="uploadProgressContainer" class="upload-progress-container" style="display: none;">
+                    <div class="progress-bar-wrapper">
+                        <div id="uploadProgressBar" class="progress-bar-fill"></div>
+                    </div>
+                    <span id="uploadProgressPercent" class="progress-percent">0%</span>
+                </div>
+
+                <!-- Lista de Archivos -->
+                <div class="files-list-header">
+                    <h4>Archivos Compartidos</h4>
+                    <button id="btnRefreshFiles" class="btn-refresh" title="Actualizar lista">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="filesContainer" class="files-container">
+                    <!-- Los archivos cargados dinámicamente se insertarán aquí -->
+                    <div class="files-empty-state">
+                        <p>No hay archivos compartidos todavía. ¡Sube uno para empezar!</p>
                     </div>
                 </div>
             </div>

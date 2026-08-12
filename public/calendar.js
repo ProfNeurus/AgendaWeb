@@ -78,6 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnClientes) btnClientes.addEventListener('click', openClientesSearchModal);
     if (btnLlaves) btnLlaves.addEventListener('click', openLlavesSearchModal);
+    const btnArchivos = document.getElementById('btnArchivos');
+    if (btnArchivos) btnArchivos.addEventListener('click', openArchivosModal);
     if (btnSearchCliente) btnSearchCliente.addEventListener('click', searchClientes);
     if (clienteSearchInput) {
         clienteSearchInput.addEventListener('keypress', (e) => {
@@ -2325,6 +2327,7 @@ document.addEventListener('keydown', function(e) {
         else if (document.getElementById('llavesModal').classList.contains('show')) closeLlavesModal();
         else if (document.getElementById('emailDetailModal').classList.contains('show')) closeEmailDetailModal();
         else if (document.getElementById('servicioDetailModal').classList.contains('show')) closeServicioDetailModal();
+        else if (document.getElementById('archivosModal').classList.contains('show')) closeArchivosModal();
     }
 });
 
@@ -2368,4 +2371,292 @@ function handleSwipe() {
             navigate(1);
         }
     }
+}
+
+// --- Gestión de Archivos Compartidos ---
+
+function openArchivosModal() {
+    const modal = document.getElementById('archivosModal');
+    modal.classList.add('show');
+    loadSharedFiles();
+    setupUploadEvents();
+}
+
+function closeArchivosModal() {
+    const modal = document.getElementById('archivosModal');
+    modal.classList.remove('show');
+    // Limpiar barra de progreso
+    document.getElementById('uploadProgressContainer').style.display = 'none';
+    document.getElementById('uploadProgressBar').style.width = '0%';
+    document.getElementById('uploadProgressPercent').textContent = '0%';
+}
+
+// Configurar eventos para el Drag and Drop
+let uploadEventsBound = false;
+function setupUploadEvents() {
+    if (uploadEventsBound) return;
+    uploadEventsBound = true;
+
+    const dragZone = document.getElementById('uploadDragZone');
+    const fileInput = document.getElementById('fileInput');
+    const refreshBtn = document.getElementById('btnRefreshFiles');
+
+    // Click en la zona de drop abre el selector
+    dragZone.addEventListener('click', () => fileInput.click());
+
+    // Selección de archivo
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            uploadFile(fileInput.files[0]);
+            fileInput.value = ''; // Limpiar input
+        }
+    });
+
+    // Eventos drag and drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dragZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            uploadFile(files[0]);
+        }
+    });
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadSharedFiles);
+    }
+}
+
+// Obtener e iconizar la lista de archivos
+async function loadSharedFiles() {
+    const container = document.getElementById('filesContainer');
+    container.innerHTML = `
+        <div class="loading-state">Cargando archivos...</div>
+    `;
+
+    try {
+        const response = await fetch('/api/files');
+        const data = await response.json();
+
+        if (!data.success) {
+            container.innerHTML = `<div class="files-empty-state"><p>${data.message || 'Error al cargar archivos'}</p></div>`;
+            return;
+        }
+
+        if (data.files.length === 0) {
+            container.innerHTML = `
+                <div class="files-empty-state">
+                    <p>No hay archivos compartidos todavía. ¡Sube uno para empezar!</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = '';
+        data.files.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+
+            const sizeFormatted = formatBytes(file.size);
+            const dateFormatted = formatDateTime(file.uploadedAt);
+            const iconSvg = getFileIconSvg(file.mimeType, file.originalName);
+
+            fileItem.innerHTML = `
+                <div class="file-main-info">
+                    <div class="file-icon-wrapper">
+                        ${iconSvg}
+                    </div>
+                    <div class="file-details">
+                        <span class="file-name" title="${file.originalName}">${file.originalName}</span>
+                        <div class="file-meta">
+                            <span>${sizeFormatted}</span>
+                            <span class="file-meta-separator">•</span>
+                            <span>${file.uploadedBy}</span>
+                            <span class="file-meta-separator">•</span>
+                            <span>${dateFormatted}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn-file-download" title="Descargar" onclick="downloadSharedFile('${file.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </button>
+                    <button class="btn-file-delete" title="Eliminar" onclick="deleteSharedFile('${file.id}', '${file.originalName}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            container.appendChild(fileItem);
+        });
+
+    } catch (error) {
+        console.error('Error cargando archivos:', error);
+        container.innerHTML = `
+            <div class="files-empty-state">
+                <p>Error de conexión al cargar archivos.</p>
+            </div>
+        `;
+    }
+}
+
+// Subir archivo usando XMLHttpRequest para reportar progreso
+function uploadFile(file) {
+    if (file.size > 50 * 1024 * 1024) {
+        alert('El archivo supera el límite permitido de 50MB.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('sharedFile', file);
+
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressPercent = document.getElementById('uploadProgressPercent');
+
+    progressContainer.style.display = 'flex';
+    progressBar.style.width = '0%';
+    progressPercent.textContent = '0%';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/files/upload', true);
+
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percentComplete + '%';
+            progressPercent.textContent = percentComplete + '%';
+        }
+    });
+
+    xhr.addEventListener('load', () => {
+        progressContainer.style.display = 'none';
+        if (xhr.status === 200) {
+            loadSharedFiles();
+        } else {
+            let errorMsg = 'Error al subir el archivo.';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMsg = response.message || errorMsg;
+            } catch (e) {}
+            alert(errorMsg);
+        }
+    });
+
+    xhr.addEventListener('error', () => {
+        progressContainer.style.display = 'none';
+        alert('Error de red al intentar subir el archivo.');
+    });
+
+    xhr.send(formData);
+}
+
+// Descargar archivo
+function downloadSharedFile(id) {
+    window.location.href = `/api/files/download/${id}`;
+}
+
+// Eliminar archivo
+async function deleteSharedFile(id, name) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar el archivo "${name}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/files/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            loadSharedFiles();
+        } else {
+            alert(data.message || 'No se pudo eliminar el archivo.');
+        }
+    } catch (error) {
+        console.error('Error eliminando archivo:', error);
+        alert('Error de conexión al eliminar el archivo.');
+    }
+}
+
+// Formatear bytes en KB/MB
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Icono correspondiente según mime type
+function getFileIconSvg(mimeType, filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    
+    // Imágenes
+    if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+        </svg>`;
+    }
+    
+    // PDF
+    if (mimeType === 'application/pdf' || ext === 'pdf') {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>`;
+    }
+
+    // Comprimidos
+    if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+        </svg>`;
+    }
+
+    // Documentos Word, Excel, etc.
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>`;
+    }
+
+    // Genérico
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+        <polyline points="13 2 13 9 20 9"/>
+    </svg>`;
 }

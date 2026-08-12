@@ -880,6 +880,128 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         console.error('Error generando email/PDF:', error);
         res.status(500).json({ success: false, message: 'Error interno: ' + error.message });
     }
+// Configuración de Multer para archivos compartidos
+const fs = require('fs');
+const multer = require('multer');
+const uploadsDir = path.join(__dirname, 'uploads');
+
+// Asegurar que existe la carpeta uploads
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+
+const metadataFilePath = path.join(uploadsDir, 'metadata.json');
+if (!fs.existsSync(metadataFilePath)) {
+    fs.writeFileSync(metadataFilePath, JSON.stringify([], null, 2), 'utf8');
+}
+
+// Configurar storage de Multer
+const fileStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: fileStorage,
+    limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50MB
+});
+
+// Helper para leer/escribir metadatos de archivos
+function getFilesMetadata() {
+    try {
+        if (!fs.existsSync(metadataFilePath)) return [];
+        return JSON.parse(fs.readFileSync(metadataFilePath, 'utf8'));
+    } catch (e) {
+        console.error('Error leyendo metadatos de archivos:', e);
+        return [];
+    }
+}
+
+function saveFilesMetadata(metadata) {
+    try {
+        fs.writeFileSync(metadataFilePath, JSON.stringify(metadata, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Error guardando metadatos de archivos:', e);
+    }
+}
+
+// API: Obtener lista de archivos
+app.get('/api/files', requireAuth, (req, res) => {
+    const files = getFilesMetadata();
+    res.json({ success: true, files });
+});
+
+// API: Subir un archivo
+app.post('/api/files/upload', requireAuth, upload.single('sharedFile'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No se recibió ningún archivo' });
+    }
+
+    const metadata = getFilesMetadata();
+    const newFile = {
+        id: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: req.session.userName || 'Usuario Anónimo',
+        userId: req.session.userId
+    };
+
+    metadata.unshift(newFile);
+    saveFilesMetadata(metadata);
+
+    res.json({ success: true, file: newFile });
+});
+
+// API: Descargar un archivo
+app.get('/api/files/download/:id', requireAuth, (req, res) => {
+    const { id } = req.params;
+    const metadata = getFilesMetadata();
+    const fileInfo = metadata.find(f => f.id === id);
+
+    if (!fileInfo) {
+        return res.status(404).json({ success: false, message: 'Archivo no encontrado' });
+    }
+
+    const filePath = path.join(uploadsDir, id);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ success: false, message: 'Archivo físico no encontrado' });
+    }
+
+    res.download(filePath, fileInfo.originalName);
+});
+
+// API: Eliminar un archivo
+app.delete('/api/files/:id', requireAuth, (req, res) => {
+    const { id } = req.params;
+    let metadata = getFilesMetadata();
+    const fileIndex = metadata.findIndex(f => f.id === id);
+
+    if (fileIndex === -1) {
+        return res.status(404).json({ success: false, message: 'Archivo no encontrado' });
+    }
+
+    const fileInfo = metadata[fileIndex];
+    const filePath = path.join(uploadsDir, id);
+
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (e) {
+        console.error('Error al eliminar archivo físico:', e);
+    }
+
+    metadata.splice(fileIndex, 1);
+    saveFilesMetadata(metadata);
+
+    res.json({ success: true, message: 'Archivo eliminado correctamente' });
 });
 
 // Iniciar servidor
