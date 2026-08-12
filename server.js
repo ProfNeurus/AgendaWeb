@@ -908,7 +908,7 @@ const fileStorage = multer.diskStorage({
 
 const upload = multer({
     storage: fileStorage,
-    limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50MB
+    limits: { fileSize: 500 * 1024 * 1024 } // Límite de 500MB
 });
 
 // Helper para leer/escribir metadatos de archivos

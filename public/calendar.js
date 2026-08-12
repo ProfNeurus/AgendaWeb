@@ -2525,8 +2525,8 @@ async function loadSharedFiles() {
 
 // Subir archivo usando XMLHttpRequest para reportar progreso
 function uploadFile(file) {
-    if (file.size > 50 * 1024 * 1024) {
-        alert('El archivo supera el límite permitido de 50MB.');
+    if (file.size > 500 * 1024 * 1024) {
+        alert('El archivo supera el límite permitido de 500MB.');
         return;
     }
 
