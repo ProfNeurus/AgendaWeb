@@ -880,6 +880,8 @@ app.post('/api/send-email', requireAuth, async (req, res) => {
         console.error('Error generando email/PDF:', error);
         res.status(500).json({ success: false, message: 'Error interno: ' + error.message });
     }
+});
+
 // Configuración de Multer para archivos compartidos
 const fs = require('fs');
 const multer = require('multer');
