@@ -939,26 +939,44 @@ app.get('/api/files', requireAuth, (req, res) => {
 });
 
 // API: Subir un archivo
-app.post('/api/files/upload', requireAuth, upload.single('sharedFile'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No se recibió ningún archivo' });
-    }
+app.post('/api/files/upload', requireAuth, (req, res) => {
+    upload.single('sharedFile')(req, res, (err) => {
+        if (err) {
+            console.error('Error subiendo archivo:', err);
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ success: false, message: 'El archivo supera el tamaño máximo permitido (500MB)' });
+                }
+                return res.status(400).json({ success: false, message: 'Error al subir el archivo: ' + err.message });
+            }
+            return res.status(500).json({ success: false, message: 'Error al subir el archivo: ' + err.message });
+        }
 
-    const metadata = getFilesMetadata();
-    const newFile = {
-        id: req.file.filename,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
-        uploadedAt: new Date().toISOString(),
-        uploadedBy: req.session.userName || 'Usuario Anónimo',
-        userId: req.session.userId
-    };
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No se recibió ningún archivo' });
+        }
 
-    metadata.unshift(newFile);
-    saveFilesMetadata(metadata);
+        try {
+            const metadata = getFilesMetadata();
+            const newFile = {
+                id: req.file.filename,
+                originalName: req.file.originalname,
+                mimeType: req.file.mimetype,
+                size: req.file.size,
+                uploadedAt: new Date().toISOString(),
+                uploadedBy: req.session.userName || 'Usuario Anónimo',
+                userId: req.session.userId
+            };
 
-    res.json({ success: true, file: newFile });
+            metadata.unshift(newFile);
+            saveFilesMetadata(metadata);
+
+            res.json({ success: true, file: newFile });
+        } catch (e) {
+            console.error('Error guardando metadatos del archivo:', e);
+            res.status(500).json({ success: false, message: 'Error al guardar la información del archivo' });
+        }
+    });
 });
 
 // API: Descargar un archivo
@@ -1004,6 +1022,15 @@ app.delete('/api/files/:id', requireAuth, (req, res) => {
     saveFilesMetadata(metadata);
 
     res.json({ success: true, message: 'Archivo eliminado correctamente' });
+});
+
+// Manejador de errores global (asegura respuestas JSON en vez de páginas HTML)
+app.use((err, req, res, next) => {
+    console.error('Error no manejado:', err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(err.status || 500).json({ success: false, message: err.message || 'Error interno del servidor' });
 });
 
 // Iniciar servidor
