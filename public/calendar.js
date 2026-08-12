@@ -578,7 +578,7 @@ function updateStats() {
     today.setHours(0, 0, 0, 0);
     const weekStart = getWeekStart(today);
     const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setDate(weekStart.getDate() + 5);
 
     const total = tasks.length;
     const completed = tasks.filter(t => t.ID_Estado && (t.ID_Estado === 'CER' || t.ID_Estado === 'TRE')).length;
@@ -625,7 +625,7 @@ function navigate(direction) {
     if (currentView === 'month') {
         currentDate.setMonth(currentDate.getMonth() + direction);
     } else if (currentView === 'week') {
-        currentDate.setDate(currentDate.getDate() + (direction * 7));
+        currentDate.setDate(currentDate.getDate() + (direction * 6));
     } else if (currentView === 'day') {
         currentDate.setDate(currentDate.getDate() + direction);
         selectedDate = new Date(currentDate);
@@ -657,7 +657,7 @@ function updateTitle() {
     } else if (currentView === 'week') {
         const weekStart = getWeekStart(currentDate);
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setDate(weekEnd.getDate() + 5);
         currentMonthEl.textContent = `${weekStart.getDate()} - ${weekEnd.getDate()} de ${monthNames[weekStart.getMonth()]} ${weekStart.getFullYear()}`;
     } else {
         const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
@@ -754,7 +754,7 @@ function renderMonthView() {
 // Renderizar vista semanal con horarios
 function renderWeekView() {
     const weekStart = getWeekStart(currentDate);
-    const dayNames = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    const dayNames = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
     const today = new Date();
@@ -764,7 +764,7 @@ function renderWeekView() {
     const weekHeader = document.getElementById('weekHeader');
     weekHeader.innerHTML = '<div class="week-header-cell time-cell"></div>';
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
         const day = new Date(weekStart);
         day.setDate(weekStart.getDate() + i);
         day.setHours(0, 0, 0, 0);
@@ -800,7 +800,7 @@ function renderWeekView() {
             row.appendChild(timeCell);
 
             // Celdas de días
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < 6; i++) {
                 const day = new Date(weekStart);
                 day.setDate(weekStart.getDate() + i);
                 day.setHours(0, 0, 0, 0);
