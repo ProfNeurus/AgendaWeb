@@ -41,6 +41,48 @@ git config --global user.email "tu@email.com"
 
 ---
 
+## 3.1 AUTENTICACIÓN CON GITHUB (Personal Access Token)
+Desde 2021 GitHub no acepta la contraseña de la cuenta para git push/pull por HTTPS.
+Hay que usar un Personal Access Token (PAT) en su lugar.
+
+### Crear un Personal Access Token
+1. Iniciar sesión en GitHub con la cuenta dueña del repo (ej. ProfNeurus).
+2. Ir a Settings (clic en el avatar, arriba a la derecha).
+3. Bajar hasta Developer settings (al final del menú izquierdo).
+4. Personal access tokens -> Tokens (classic).
+5. Generate new token -> Generate new token (classic).
+6. Completar:
+   - Note: nombre descriptivo (ej. "AgendaWeb local").
+   - Expiration: duración deseada (30/60/90 días, o "No expiration").
+   - Scopes: tildar "repo" (acceso completo a repositorios).
+7. Generate token.
+8. Copiar el token inmediatamente (GitHub solo lo muestra una vez).
+
+Al hacer git push y pedir credenciales, usar:
+   Usuario: el nombre de usuario de GitHub (ej. ProfNeurus)
+   Contraseña: pegar el token generado (NO la contraseña real de la cuenta)
+
+### Cambiar de identidad / arreglar error 403 "Permission denied"
+Si el push falla con un error como:
+   remote: Permission to Usuario/Repo.git denied to OtroUsuario
+   fatal: ... The requested URL returned error: 403
+
+Es porque Windows tiene guardada una credencial de otra cuenta de GitHub.
+Para borrarla y forzar que pida el login correcto:
+
+powershell
+cmdkey /delete:LegacyGeneric:target=git:https://github.com
+
+Luego, al hacer el próximo git push, se abrirá el prompt de login de
+Git Credential Manager: ingresar el usuario correcto y pegar el PAT como contraseña.
+
+Para verificar si hay una credencial de GitHub guardada:
+
+powershell
+cmdkey /list | Select-String -Context 0,2 "github"
+
+---
+
 ## 4. GESTIÓN DE VERSIONES (TAGS)
 Para marcar una versión estable (ejemplo: v1.0, v1.1):
 

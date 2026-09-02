@@ -342,8 +342,14 @@ async function loadTasks() {
             if (lastTaskIds.size > 0) {
                 newTasks.forEach(task => {
                     if (!lastTaskIds.has(task.ID_PEDIDOSERVICIO)) {
+                        const fechaStr = task.FechaPrometido
+                            ? new Date(task.FechaPrometido).toLocaleString('es-ES', {
+                                weekday: 'long', day: 'numeric', month: 'long',
+                                hour: '2-digit', minute: '2-digit'
+                            })
+                            : 'Sin fecha';
                         showNotification("Nueva tarea asignada", {
-                            body: `${task.ClienteNombre}\n${task.Falla || ''}`,
+                            body: `Fecha: ${fechaStr}\nCliente: ${task.ClienteNombre}\nTarea: ${task.Falla || ''}`,
                             requireInteraction: true
                         });
                     }
